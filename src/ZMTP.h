@@ -1,33 +1,21 @@
-#pragma once
+#ifndef __ZMTP_H_INCLUDED__
+#define __ZMTP_H_INCLUDED__
 
-/* zMTP library by Michael Schoonmaker
- */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-// This will load the definition for common Particle variable types
-#include "Particle.h"
+typedef struct _zmtp_frame_t zmtp_frame_t;
+typedef struct _zmtp_msg_t zmtp_msg_t;
 
-// This is your main class that users will import into their application
-class ZMTP
-{
-public:
-  /**
-   * Constructor
-   */
-  ZMTP();
+zmtp_frame_t * zmtp_frame_new();
+void zmtp_frame_destroy(zmtp_frame_t **self_p);
 
-  /**
-   * Example method
-   */
-  void begin();
+zmtp_msg_t * zmtp_msg_new();
+void zmtp_msg_destroy(zmtp_msg_t **self_p);
 
-  /**
-   * Example method
-   */
-  void process();
+#ifdef __cplusplus
+}
+#endif
 
-private:
-  /**
-   * Example private method
-   */
-  void doit();
-};
+#endif
