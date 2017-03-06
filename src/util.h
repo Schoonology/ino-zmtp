@@ -17,7 +17,13 @@
   ((void) Serial.printf ("%s:%u: failed assertion '%s'\n", file, line, e), \
     abort ())
 
-#define debug_dump(e, len) \
+#define VAR_ARG_MACRO(_1,_2,NAME,...) NAME
+#define debug_dump(...) VAR_ARG_MACRO(__VA_ARGS__, debug_dump2, debug_dump1)(__VA_ARGS__)
+
+#define debug_dump1(e) \
+  ((void) (Serial.printf("%s = ", #e) && Serial.println(e) ))
+
+#define debug_dump2(e, len) \
   ((void) __debug_dump (#e, e, len))
 void __debug_dump (const char *label, const uint8_t *buffer, uint8_t len);
 
