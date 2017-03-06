@@ -27,4 +27,10 @@
   ((void) __debug_dump (#e, e, len))
 void __debug_dump (const char *label, const uint8_t *buffer, uint8_t len);
 
+void zero_bytes(uint8_t *buffer, uint8_t offset, uint8_t length);
+
+uint8_t *uuid_new ();
+
+bool uuid_equal (uint8_t *first, uint8_t *second);
+
 #endif
