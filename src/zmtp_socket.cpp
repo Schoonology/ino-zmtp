@@ -114,6 +114,10 @@ void zmtp_socket_destroy (zmtp_socket_t **self_p) {
   }
 }
 
+bool zmtp_socket_ready (zmtp_socket_t *self) {
+  return self->state == READY;
+}
+
 bool zmtp_socket_connect (zmtp_socket_t *self, uint8_t *addr, uint16_t port) {
   assert (self);
   assert (self->state == INIT);
@@ -185,6 +189,8 @@ void zmtp_send_handshake (zmtp_socket_t *self) {
   handshake[43] = 1;
   memcpy (handshake + 44, self->uuid, 16);
 
+  debug_dump (handshake, 60);
+
   self->socket->write (handshake, 60);
   self->socket->flush ();
 }
@@ -233,6 +239,16 @@ void zmtp_socket_update (zmtp_socket_t *self) {
         break;
     }
   }
+}
+
+void zmtp_socket_send (zmtp_socket_t *self, zmtp_frame_t *frame) {
+  assert (self);
+  assert (self->state == READY);
+
+  debug_dump (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
+
+  self->socket->write (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
+  self->socket->flush ();
 }
 
 void zmtp_socket_dump (zmtp_socket_t *self) {
