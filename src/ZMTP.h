@@ -1,21 +1,28 @@
 #ifndef __ZMTP_H_INCLUDED__
 #define __ZMTP_H_INCLUDED__
 
-#ifdef __cplusplus
-extern "C" {
+#if defined(ARDUINO) && ARDUINO >= 100
+  #include "Arduino.h"
+#elif defined(SPARK)
+  #include "application.h"
+#else
+  #error Only ARDUINO or SPARK supported.
 #endif
 
-typedef struct _zmtp_frame_t zmtp_frame_t;
-typedef struct _zmtp_msg_t zmtp_msg_t;
+typedef enum {
+  DEALER,
+} zmtp_socket_type_t;
 
-zmtp_frame_t * zmtp_frame_new();
-void zmtp_frame_destroy(zmtp_frame_t **self_p);
+typedef struct _zmtp_socket_t zmtp_socket_t;
 
-zmtp_msg_t * zmtp_msg_new();
-void zmtp_msg_destroy(zmtp_msg_t **self_p);
+zmtp_socket_t *zmtp_socket_new (zmtp_socket_type_t type);
 
-#ifdef __cplusplus
-}
-#endif
+void zmtp_socket_destroy (zmtp_socket_t **self_p);
+
+bool zmtp_socket_connect (zmtp_socket_t *self, uint8_t *addr, uint16_t port);
+
+void zmtp_socket_update (zmtp_socket_t *self);
+
+void zmtp_socket_dump (zmtp_socket_t *self);
 
 #endif
