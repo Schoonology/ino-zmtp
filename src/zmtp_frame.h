@@ -15,6 +15,10 @@ zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size);
 
 void zmtp_frame_destroy (zmtp_frame_t **self_p);
 
+uint8_t zmtp_frame_size (zmtp_frame_t *self);
+
+uint8_t *zmtp_frame_bytes (zmtp_frame_t *self);
+
 void zmtp_frame_dump (zmtp_frame_t *self);
 
 #endif
