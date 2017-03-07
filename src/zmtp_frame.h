@@ -9,9 +9,16 @@
   #error Only ARDUINO or SPARK supported.
 #endif
 
+typedef enum {
+  NONE,
+  MORE,
+} zmtp_frame_flags_t;
+
 typedef struct _zmtp_frame_t zmtp_frame_t;
 
 zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size);
+
+zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size, zmtp_frame_flags_t flags);
 
 void zmtp_frame_destroy (zmtp_frame_t **self_p);
 

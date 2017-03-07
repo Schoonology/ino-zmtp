@@ -8,6 +8,10 @@ struct _zmtp_frame_t {
 };
 
 zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size) {
+  return zmtp_frame_new (data, size, NONE);
+}
+
+zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size, zmtp_frame_flags_t flags) {
   zmtp_frame_t *self = (zmtp_frame_t *) malloc (sizeof (zmtp_frame_t));
   assert (self);
 
@@ -15,7 +19,7 @@ zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size) {
     self->buffer = (uint8_t *) malloc (size + ZMTP_FRAMING_OCTETS);
     assert (self->buffer);
 
-    self->buffer[0] = 0;
+    self->buffer[0] = flags;
     self->buffer[1] = size;
 
     memcpy (self->buffer + ZMTP_FRAMING_OCTETS, data, size);
