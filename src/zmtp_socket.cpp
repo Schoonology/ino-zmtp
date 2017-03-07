@@ -117,6 +117,13 @@ void zmtp_socket_destroy (zmtp_socket_t **self_p) {
   }
 }
 
+void zmtp_socket_uuid (zmtp_socket_t *self, uint8_t *uuid) {
+  assert (self);
+  assert (uuid);
+
+  memcpy (self->uuid, uuid, 16);
+}
+
 bool zmtp_socket_ready (zmtp_socket_t *self) {
   return self->state == READY;
 }
