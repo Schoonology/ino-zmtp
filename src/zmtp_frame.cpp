@@ -1,6 +1,8 @@
 #include "zmtp_frame.h"
 #include "util.h"
 
+#define ZMTP_FRAMING_OCTETS 2
+
 struct _zmtp_frame_t {
   uint8_t *buffer;
 };
@@ -10,13 +12,13 @@ zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size) {
   assert (self);
 
   if (data) {
-    self->buffer = (uint8_t *) malloc (size + 2);
+    self->buffer = (uint8_t *) malloc (size + ZMTP_FRAMING_OCTETS);
     assert (self->buffer);
 
     self->buffer[0] = 0;
     self->buffer[1] = size;
 
-    memcpy (self->buffer + 2, data, size);
+    memcpy (self->buffer + ZMTP_FRAMING_OCTETS, data, size);
   } else {
     self->buffer = NULL;
   }
@@ -41,7 +43,13 @@ void zmtp_frame_destroy (zmtp_frame_t **self_p) {
 }
 
 uint8_t zmtp_frame_size (zmtp_frame_t *self) {
-  return self->buffer[1] + 2;
+  assert (self);
+
+  if (self->buffer) {
+    return self->buffer[1] + ZMTP_FRAMING_OCTETS;
+  } else {
+    return 0;
+  }
 }
 
 uint8_t *zmtp_frame_bytes (zmtp_frame_t *self) {
@@ -54,9 +62,8 @@ void zmtp_frame_dump (zmtp_frame_t *self) {
   assert (self);
 
   if (self->buffer) {
-    debug_dump (self->buffer[0]);
-    debug_dump (self->buffer[1]);
-    debug_dump (self->buffer + 2, self->buffer[1]);
+    debug_dump (self->buffer, ZMTP_FRAMING_OCTETS);
+    debug_dump (self->buffer + ZMTP_FRAMING_OCTETS, self->buffer[1]);
   } else {
     debug_dump ("Empty frame");
   }
