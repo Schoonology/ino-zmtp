@@ -13,6 +13,8 @@ typedef enum {
 } zmtp_socket_state_t;
 
 zmtp_socket_state_t parse_greeting (zmtp_socket_state_t old_state, uint8_t *buffer, int length) {
+  assert (buffer);
+
   zmtp_socket_state_t new_state = old_state;
 
   if (new_state == SIG_WAIT) {
@@ -61,6 +63,8 @@ zmtp_socket_state_t parse_greeting (zmtp_socket_state_t old_state, uint8_t *buff
 }
 
 zmtp_socket_state_t parse_handshake (uint8_t *buffer, int length) {
+  assert (buffer);
+
   if (length <= 2 || buffer[0] != 0x04) {
     return _ERROR;
   }
@@ -91,7 +95,7 @@ zmtp_socket_t *zmtp_socket_new (zmtp_socket_type_t type) {
 
   self->type = type;
   self->state = INIT;
-  self->uuid = uuid_new();
+  self->uuid = uuid_new ();
 
   self->socket = new TCPClient();
   assert (self->socket);
@@ -109,7 +113,6 @@ void zmtp_socket_destroy (zmtp_socket_t **self_p) {
     delete self->socket;
 
     free (self);
-
     *self_p = NULL;
   }
 }
@@ -121,6 +124,7 @@ bool zmtp_socket_ready (zmtp_socket_t *self) {
 bool zmtp_socket_connect (zmtp_socket_t *self, uint8_t *addr, uint16_t port) {
   assert (self);
   assert (self->state == INIT);
+  assert (addr);
 
   bool success = self->socket->connect (IPAddress (addr), port);
 
@@ -244,8 +248,7 @@ void zmtp_socket_update (zmtp_socket_t *self) {
 void zmtp_socket_send (zmtp_socket_t *self, zmtp_frame_t *frame) {
   assert (self);
   assert (self->state == READY);
-
-  debug_dump (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
+  assert (frame);
 
   self->socket->write (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
   self->socket->flush ();

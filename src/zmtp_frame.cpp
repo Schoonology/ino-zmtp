@@ -45,6 +45,8 @@ uint8_t zmtp_frame_size (zmtp_frame_t *self) {
 }
 
 uint8_t *zmtp_frame_bytes (zmtp_frame_t *self) {
+  assert (self);
+
   return self->buffer;
 }
 

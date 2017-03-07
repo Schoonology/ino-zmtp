@@ -1,6 +1,9 @@
 #include "util.h"
 
 void __debug_dump (const char *label, const uint8_t *buffer, uint8_t len) {
+  assert (label);
+  assert (buffer);
+
   Serial.print (label);
   Serial.print (" = ");
   for (uint8_t i = 0; i < len; i++) {
@@ -10,6 +13,8 @@ void __debug_dump (const char *label, const uint8_t *buffer, uint8_t len) {
 }
 
 void zero_bytes(uint8_t *buffer, uint8_t offset, uint8_t length) {
+  assert (buffer);
+
   for (uint8_t i = offset; i < (offset + length); i++) {
     buffer[i] = 0;
   }
@@ -27,5 +32,8 @@ uint8_t *uuid_new () {
 }
 
 bool uuid_equal (uint8_t *first, uint8_t *second) {
+  assert (first);
+  assert (second);
+
   return !memcmp (first, second, 16);
 }
