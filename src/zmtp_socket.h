@@ -1,14 +1,7 @@
 #ifndef __ZMTP_SOCKET_H_INCLUDED__
 #define __ZMTP_SOCKET_H_INCLUDED__
 
-#if defined(ARDUINO) && ARDUINO >= 100
-  #include "Arduino.h"
-#elif defined(SPARK)
-  #include "application.h"
-#else
-  #error Only ARDUINO or SPARK supported.
-#endif
-
+#include "arch.h"
 #include "zmtp_frame.h"
 
 typedef enum {

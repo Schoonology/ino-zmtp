@@ -1,13 +1,7 @@
 #ifndef __UTIL_H_INCLUDED__
 #define __UTIL_H_INCLUDED__
 
-#if defined(ARDUINO) && ARDUINO >= 100
-  #include "Arduino.h"
-#elif defined(SPARK)
-  #include "application.h"
-#else
-  #error Only ARDUINO or SPARK supported.
-#endif
+#include "arch.h"
 
 #undef assert
 #undef __assert
@@ -27,7 +21,7 @@
   ((void) __debug_dump (#e, e, len))
 void __debug_dump (const char *label, const uint8_t *buffer, uint8_t len);
 
-void zero_bytes(uint8_t *buffer, uint8_t offset, uint8_t length);
+void zero_bytes (uint8_t *buffer, uint8_t offset, uint8_t length);
 
 uint8_t *uuid_new ();
 

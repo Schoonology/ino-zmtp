@@ -41,7 +41,6 @@ void zmtp_frame_destroy (zmtp_frame_t **self_p) {
     }
 
     free(self);
-
     *self_p = NULL;
   }
 }
