@@ -8,7 +8,7 @@ struct _zmtp_frame_t {
 };
 
 zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size) {
-  return zmtp_frame_new (data, size, NONE);
+  return zmtp_frame_new (data, size, ZMTP_FRAME_NONE);
 }
 
 zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size, zmtp_frame_flags_t flags) {
