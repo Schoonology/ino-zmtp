@@ -33,6 +33,9 @@ zmtp_frame_t *zmtp_frame_new (const uint8_t *data, uint8_t size, zmtp_frame_flag
 // Destroy a frame.
 void zmtp_frame_destroy (zmtp_frame_t **self_p);
 
+// Updates the flags on a ZMTP frame.
+void zmtp_frame_flags (zmtp_frame_t *self, zmtp_frame_flags_t flags);
+
 // Return the size, in bytes, of the frame. This is larger than the
 // original size parameter in `zmtp_frame_new`, as this size includes
 // framing.

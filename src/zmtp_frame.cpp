@@ -45,6 +45,14 @@ void zmtp_frame_destroy (zmtp_frame_t **self_p) {
   }
 }
 
+void zmtp_frame_flags (zmtp_frame_t *self, zmtp_frame_flags_t flags) {
+  assert (self);
+
+  if (self->buffer) {
+    self->buffer[0] = flags;
+  }
+}
+
 uint8_t zmtp_frame_size (zmtp_frame_t *self) {
   assert (self);
 
