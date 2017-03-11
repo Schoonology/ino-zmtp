@@ -73,9 +73,9 @@ void zmtp_frame_dump (zmtp_frame_t *self) {
   assert (self);
 
   if (self->buffer) {
-    debug_dump (self->buffer, ZMTP_FRAMING_OCTETS);
-    debug_dump (self->buffer + ZMTP_FRAMING_OCTETS, self->buffer[1]);
+    zmtp_debug_dump (self->buffer, ZMTP_FRAMING_OCTETS);
+    zmtp_debug_dump (self->buffer + ZMTP_FRAMING_OCTETS, self->buffer[1]);
   } else {
-    debug_dump ("Empty frame");
+    zmtp_debug_dump ("Empty frame");
   }
 }

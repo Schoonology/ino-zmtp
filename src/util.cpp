@@ -1,6 +1,6 @@
 #include "util.h"
 
-void __debug_dump (const char *label, const uint8_t *buffer, uint8_t len) {
+void __zmtp_debug_dump (const char *label, const uint8_t *buffer, uint8_t len) {
   assert (label);
   assert (buffer);
 

@@ -12,15 +12,13 @@
     abort ())
 
 #define VAR_ARG_MACRO(_1,_2,NAME,...) NAME
-#define debug_dump(...) VAR_ARG_MACRO(__VA_ARGS__, debug_dump2, debug_dump1)(__VA_ARGS__)
+#define zmtp_debug_dump(...) VAR_ARG_MACRO(__VA_ARGS__, zmtp_debug_dump2, zmtp_debug_dump1)(__VA_ARGS__)
 
-#define debug_dump1(e) \
+#define zmtp_debug_dump1(e) \
   ((void) (Serial.printf("%s = ", #e) && Serial.println(e) ))
 
-#define debug_dump2(e, len) \
-  ((void) __debug_dump (#e, e, len))
-void __debug_dump (const char *label, const uint8_t *buffer, uint8_t len);
-
-void zero_bytes (uint8_t *buffer, uint8_t offset, uint8_t length);
+#define zmtp_debug_dump2(e, len) \
+  ((void) __zmtp_debug_dump (#e, e, len))
+void __zmtp_debug_dump (const char *label, const uint8_t *buffer, uint8_t len);
 
 #endif

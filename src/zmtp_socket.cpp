@@ -140,7 +140,7 @@ bool zmtp_socket_connect (zmtp_socket_t *self, uint8_t *addr, uint16_t port) {
 
     assert (self->type == DEALER);
     uint8_t greeting[64];
-    zero_bytes (greeting, 0, 64);
+    memset (greeting, 0, 64);
 
     // signature
     greeting[0] = 0xFF;
@@ -156,7 +156,7 @@ bool zmtp_socket_connect (zmtp_socket_t *self, uint8_t *addr, uint16_t port) {
     // as-server
     greeting[32] = 0x00;
 
-    debug_dump (greeting, 64);
+    zmtp_debug_dump (greeting, 64);
 
     self->socket->write (greeting, 64);
     self->socket->flush ();
@@ -189,18 +189,18 @@ void zmtp_send_handshake (zmtp_socket_t *self) {
   // metadata
   handshake[8] = 11;
   memcpy (handshake + 9, "Socket-Type", 11);
-  zero_bytes (handshake, 20, 4);
+  memset (handshake + 20, 0, 4);
   handshake[23] = 6;
   memcpy (handshake + 24, "DEALER", 6);
 
   handshake[30] = 8;
   memcpy (handshake + 31, "Identity", 8);
-  zero_bytes (handshake, 39, 4);
+  memset (handshake + 39, 0, 4);
   handshake[42] = 17;
   handshake[43] = 1;
   memcpy (handshake + 44, zmtp_uuid_bytes (self->uuid), 16);
 
-  debug_dump (handshake, 60);
+  zmtp_debug_dump (handshake, 60);
 
   self->socket->write (handshake, 60);
   self->socket->flush ();
@@ -215,7 +215,7 @@ void zmtp_socket_update (zmtp_socket_t *self) {
     Serial.printf ("Bytes read: %d\n", bytes_read);
 
     Serial.print ("Bytes: ");
-    debug_dump (buffer, bytes_read);
+    zmtp_debug_dump (buffer, bytes_read);
 
     switch (self->state) {
       case SIG_WAIT:
@@ -264,6 +264,6 @@ void zmtp_socket_send (zmtp_socket_t *self, zmtp_frame_t *frame) {
 void zmtp_socket_dump (zmtp_socket_t *self) {
   assert (self);
 
-  debug_dump (self->type);
-  debug_dump (self->state);
+  zmtp_debug_dump (self->type);
+  zmtp_debug_dump (self->state);
 }
