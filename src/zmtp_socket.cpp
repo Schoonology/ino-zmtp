@@ -85,7 +85,7 @@ zmtp_socket_state_t parse_handshake (uint8_t *buffer, int length) {
 struct _zmtp_socket_t {
   zmtp_socket_type_t type;
   zmtp_socket_state_t state;
-  uint8_t *uuid;
+  zmtp_uuid_t *uuid;
   TCPClient *socket;
 };
 
@@ -95,7 +95,7 @@ zmtp_socket_t *zmtp_socket_new (zmtp_socket_type_t type) {
 
   self->type = type;
   self->state = INIT;
-  self->uuid = uuid_new ();
+  self->uuid = zmtp_uuid_new ();
 
   self->socket = new TCPClient();
   assert (self->socket);
@@ -109,7 +109,7 @@ void zmtp_socket_destroy (zmtp_socket_t **self_p) {
   if (*self_p) {
     zmtp_socket_t *self = *self_p;
 
-    free (self->uuid);
+    zmtp_uuid_destroy (&self->uuid);
     delete self->socket;
 
     free (self);
@@ -117,11 +117,11 @@ void zmtp_socket_destroy (zmtp_socket_t **self_p) {
   }
 }
 
-void zmtp_socket_uuid (zmtp_socket_t *self, uint8_t *uuid) {
+void zmtp_socket_uuid (zmtp_socket_t *self, zmtp_uuid_t *uuid) {
   assert (self);
   assert (uuid);
 
-  memcpy (self->uuid, uuid, 16);
+  memcpy (zmtp_uuid_bytes (self->uuid), zmtp_uuid_bytes (uuid), ZMTP_UUID_LENGTH);
 }
 
 bool zmtp_socket_ready (zmtp_socket_t *self) {
@@ -198,7 +198,7 @@ void zmtp_send_handshake (zmtp_socket_t *self) {
   zero_bytes (handshake, 39, 4);
   handshake[42] = 17;
   handshake[43] = 1;
-  memcpy (handshake + 44, self->uuid, 16);
+  memcpy (handshake + 44, zmtp_uuid_bytes (self->uuid), 16);
 
   debug_dump (handshake, 60);
 

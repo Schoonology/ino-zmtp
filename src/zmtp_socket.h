@@ -9,6 +9,7 @@
 
 #include "arch.h"
 #include "zmtp_frame.h"
+#include "zmtp_uuid.h"
 
 // Socket types supported by ZMTP sockets.
 typedef enum {
@@ -28,7 +29,7 @@ void zmtp_socket_destroy (zmtp_socket_t **self_p);
 // Set the UUID "identity" associated with this socket. The UUID
 // should be 16 bytes in length, which will be copied into the
 // internal state.
-void zmtp_socket_uuid (zmtp_socket_t *self, uint8_t *uuid);
+void zmtp_socket_uuid (zmtp_socket_t *self, zmtp_uuid_t *uuid);
 
 // Return true if the socket is connected and the ZMTP handshake
 // has completed, and false otherwise.
