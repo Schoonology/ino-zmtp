@@ -9,6 +9,10 @@ struct _zmtp_msg_t {
 zmtp_msg_t *zmtp_msg_new () {
   zmtp_msg_t *self = (zmtp_msg_t *) malloc (sizeof (zmtp_msg_t));
   assert (self);
+
+  self->frame_list = NULL;
+  self->frame_count = 0;
+
   return self;
 }
 
@@ -42,7 +46,7 @@ void zmtp_msg_push (zmtp_msg_t *self, zmtp_frame_t **frame_p) {
   if (self->frame_list) {
     zmtp_frame_flags (self->frame_list[self->frame_count - 1], ZMTP_FRAME_MORE);
 
-    memcpy (frame_list, self->frame_list, self->frame_count);
+    memcpy (frame_list, self->frame_list, sizeof (zmtp_frame_t *) * self->frame_count);
     free (self->frame_list);
   }
   self->frame_list = frame_list;
@@ -64,7 +68,7 @@ zmtp_frame_t *zmtp_msg_pop (zmtp_msg_t *self) {
 
   if (frame_count > 0) {
     zmtp_frame_t **frame_list = (zmtp_frame_t **) malloc (sizeof (zmtp_frame_t *) * frame_count);
-    memcpy (frame_list, self->frame_list, frame_count);
+    memcpy (frame_list, self->frame_list, sizeof (zmtp_frame_t *) * frame_count);
     free (self->frame_list);
     self->frame_list = frame_list;
     self->frame_count = frame_count;
@@ -89,4 +93,16 @@ void zmtp_msg_send (zmtp_msg_t **self_p, zmtp_socket_t *socket) {
   }
 
   zmtp_msg_destroy (self_p);
+}
+
+void zmtp_msg_dump (zmtp_msg_t *self) {
+  assert (self);
+
+  if (!self->frame_list) {
+    // TODO(schoon) - Add to debug_ functions.
+    Serial.println ("self->frame_list = NULL");
+    return;
+  }
+
+  zmtp_debug_dump ((uint8_t *) self->frame_list, sizeof (zmtp_frame_t *) * self->frame_count);
 }
