@@ -1,60 +1,68 @@
-# ZMTP
+# ZMTP for Particle
 
-A Particle library for ZMTP
+This is a basic, _partial_ implementation of [ZMTP][zmtp] for Particle devices. The current goal of this library is to support the [ZRE][zre] library. Unless you want the lower-level control offered by ZMTP, using ZRE is recommended.
 
-## Welcome to your library!
+Current support:
 
-To get started, modify the sources in [src](src). Rename the example folder inside [examples](examples) to a more meaningful name and add additional examples in separate folders.
+- DEALER sockets
+  - Associating a custom identity
+  - Sending messages
 
-To compile your example you can use `particle compile examples/usage` command in [Particle CLI](https://docs.particle.io/guide/tools-and-features/cli#update-your-device-remotely) or use our [Desktop IDE](https://docs.particle.io/guide/tools-and-features/dev/#compiling-code).
+Desired support:
 
-Libraries can also depend on other libraries. To add a dependency use [`particle library add`](https://docs.particle.io/guide/tools-and-features/cli#adding-a-library) or [library management](https://docs.particle.io/guide/tools-and-features/dev/#managing-libraries) in Desktop IDE.
+- Receiving messages for all socket types
+- ROUTER sockets
 
-After the library is done you can upload it with `particle library upload` or `Upload` command in the IDE. This will create a private (only visible by you) library that you can use in other projects. If you wish to make your library public, use `particle library publish` or `Publish` command.
+## Including in your project
 
-_TODO: update this README_
+To add the ZMTP library to your Particle project:
+
+```
+particle library add ZMTP
+```
+
+To include the ZMTP types and functions in your code, add the following toward
+the top of your project:
+
+```
+#include "ZMTP.h"
+```
 
 ## Usage
 
-Connect XYZ hardware, add the ZMTP library to your project and follow this simple example:
+The ZMTP library (and it's bigger sibling, ZeroMQ) are centered around two types: sockets (`zmtp_socket_t`) and frames (`zmtp_frame_t`). To start, create a new socket, providing the type of socket you want to create:
 
 ```
-ZMTP zMTP;
-
-void setup() {
-  zMTP.begin();
-}
-
-void loop() {
-  zMTP.process();
-}
+zmtp_socket_t *socket = zmtp_socket_new (DEALER);
 ```
 
-See the [examples](examples) folder for more details.
+Messages in ZMTP are built of frames: zero or more frames with a "MORE" flag, followed by a _single_ frame without that flag:
 
-## Documentation
+```
+uint8_t first_data[5] = { 'h', 'e', 'l', 'l', 'o' };
+zmtp_frame_t *first_frame = zmtp_frame_new (first_data, 5, ZMTP_FRAME_MORE);
 
-TODO: Describe `ZMTP`
+uint8_t second_data[5] = { 'w', 'o', 'r', 'l', 'd' };
+zmtp_frame_t *second_frame = zmtp_frame_new (second_data, 5, ZMTP_FRAME_MORE);
+```
+
+To send those frames:
+
+```
+zmtp_socket_send (socket, first_frame);
+zmtp_socket_send (socket, second_frame);
+```
+
+Finally, once you're finished with the socket, it should be destroyed:
+
+```
+zmtp_socket_destroy (&socket);
+```
 
 ## Contributing
 
-Here's how you can make changes to this library and eventually contribute those changes back.
+Pull requests are welcome and encouraged. Please adhere to the [Contributor Covenant][covenant] in your interactions.
 
-To get started, [clone the library from GitHub to your local machine](https://help.github.com/articles/cloning-a-repository/).
-
-Change the name of the library in `library.properties` to something different. You can add your name at then end.
-
-Modify the sources in <src> and <examples> with the new behavior.
-
-To compile an example, use `particle compile examples/usage` command in [Particle CLI](https://docs.particle.io/guide/tools-and-features/cli#update-your-device-remotely) or use our [Desktop IDE](https://docs.particle.io/guide/tools-and-features/dev/#compiling-code).
-
-After your changes are done you can upload them with `particle library upload` or `Upload` command in the IDE. This will create a private (only visible by you) library that you can use in other projects. Do `particle library add ZMTP_myname` to add the library to a project on your machine or add the ZMTP_myname library to a project on the Web IDE or Desktop IDE.
-
-At this point, you can create a [GitHub pull request](https://help.github.com/articles/about-pull-requests/) with your changes to the original library. 
-
-If you wish to make your library public, use `particle library publish` or `Publish` command.
-
-## LICENSE
-Copyright 2017 Michael Schoonmaker
-
-Licensed under the <insert your choice of license here> license
+[zmtp]: https://rfc.zeromq.org/spec:37/ZMTP
+[zre]: https://rfc.zeromq.org/spec:36/ZRE/
+[covenant]: https://www.contributor-covenant.org/version/1/4/code-of-conduct.html
