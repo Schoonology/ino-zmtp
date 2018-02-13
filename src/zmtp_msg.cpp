@@ -80,16 +80,15 @@ zmtp_frame_t *zmtp_msg_pop (zmtp_msg_t *self) {
   return frame;
 }
 
-void zmtp_msg_send (zmtp_msg_t **self_p, zmtp_socket_t *socket) {
+void zmtp_msg_send (zmtp_msg_t **self_p, ZMTPSocket &socket) {
   assert (self_p);
-  assert (socket);
 
   zmtp_msg_t *self = *self_p;
   assert (self);
 
   for (uint8_t i = 0; i < self->frame_count; ++i) {
     zmtp_frame_t *frame = self->frame_list[i];
-    zmtp_socket_send (socket, frame);
+    socket.send (frame);
   }
 
   zmtp_msg_destroy (self_p);

@@ -28,7 +28,7 @@ zmtp_frame_t *zmtp_msg_pop (zmtp_msg_t *self);
 
 // Sends a ZMTP message over a ZMTP socket, consuming the message
 // in the process.
-void zmtp_msg_send (zmtp_msg_t **self_p, zmtp_socket_t *socket);
+void zmtp_msg_send (zmtp_msg_t **self_p, ZMTPSocket &socket);
 
 void zmtp_msg_dump (zmtp_msg_t *self);
 

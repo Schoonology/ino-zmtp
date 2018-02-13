@@ -1,17 +1,6 @@
 #include "zmtp_socket.h"
 #include "util.h"
 
-typedef enum {
-  INIT = 0,   // New connection
-  SIG_WAIT,   // ZMTP signature sent
-  SIG_ACK,    // ZMTP signature acknowledged
-  VER_ACK,    // ZMTP version acknowledged
-  GRT_ACK,    // ZMTP greeting acknowledged
-  READY_WAIT, // ZMTP READY command sent
-  READY,      // ZMTP READY command acknowledged
-  _ERROR,     // Connection or ZMTP handshake failed
-} zmtp_socket_state_t;
-
 zmtp_socket_state_t parse_greeting (zmtp_socket_state_t old_state, uint8_t *buffer, int length) {
   assert (buffer);
 
@@ -82,63 +71,44 @@ zmtp_socket_state_t parse_handshake (uint8_t *buffer, int length) {
   return READY;
 }
 
-struct _zmtp_socket_t {
-  zmtp_socket_type_t type;
-  zmtp_socket_state_t state;
-  zmtp_uuid_t *uuid;
-  TCPClient *socket;
-};
-
-zmtp_socket_t *zmtp_socket_new (zmtp_socket_type_t type) {
-  zmtp_socket_t *self = (zmtp_socket_t *) malloc (sizeof (zmtp_socket_t));
-  assert (self);
-
-  self->type = type;
-  self->state = INIT;
-  self->uuid = zmtp_uuid_new ();
-
-  self->socket = new TCPClient();
-  assert (self->socket);
-
-  return self;
+ZMTPSocket::ZMTPSocket (zmtp_socket_type_t type) {
+  this->type = type;
+  this->state = INIT;
+  this->identity = NULL;
+  this->identity_size = 0;
 }
 
-void zmtp_socket_destroy (zmtp_socket_t **self_p) {
-  assert (self_p);
+ZMTPSocket::~ZMTPSocket () {
+  delete this->identity;
+}
 
-  if (*self_p) {
-    zmtp_socket_t *self = *self_p;
+void ZMTPSocket::setIdentity (uint8_t *data, size_t size) {
+  assert (data);
+  assert (size < 256);
 
-    zmtp_uuid_destroy (&self->uuid);
-    delete self->socket;
-
-    free (self);
-    *self_p = NULL;
+  if (this->identity) {
+    delete this->identity;
   }
+
+  this->identity = new uint8_t[size];
+  memcpy (this->identity, data, size);
+  identity_size = size;
 }
 
-void zmtp_socket_uuid (zmtp_socket_t *self, zmtp_uuid_t *uuid) {
-  assert (self);
-  assert (uuid);
-
-  memcpy (zmtp_uuid_bytes (self->uuid), zmtp_uuid_bytes (uuid), ZMTP_UUID_LENGTH);
+bool ZMTPSocket::ready () {
+  return this->state == READY;
 }
 
-bool zmtp_socket_ready (zmtp_socket_t *self) {
-  return self->state == READY;
-}
-
-bool zmtp_socket_connect (zmtp_socket_t *self, uint8_t *addr, uint16_t port) {
-  assert (self);
-  assert (self->state == INIT);
+bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
+  assert (this->state == INIT);
   assert (addr);
 
-  bool success = self->socket->connect (IPAddress (addr), port);
+  bool success = this->socket.connect (IPAddress (addr), port);
 
   if (success) {
     Serial.println ("Connected.");
 
-    assert (self->type == DEALER);
+    assert (this->type == DEALER);
     uint8_t greeting[64];
     memset (greeting, 0, 64);
 
@@ -158,24 +128,79 @@ bool zmtp_socket_connect (zmtp_socket_t *self, uint8_t *addr, uint16_t port) {
 
     zmtp_debug_dump (greeting, 64);
 
-    self->socket->write (greeting, 64);
-    self->socket->flush ();
+    this->socket.write (greeting, 64);
+    this->socket.flush ();
 
-    self->state = SIG_WAIT;
+    this->state = SIG_WAIT;
   } else {
     Serial.println ("Failed to connect.");
 
-    self->state = _ERROR;
+    this->state = _ERROR;
   }
 
-  zmtp_socket_dump (self);
+  this->print ();
 
   return success;
 }
 
-void zmtp_send_handshake (zmtp_socket_t *self) {
-  assert (self);
+void ZMTPSocket::update () {
+  if (this->socket.available ()) {
+    uint8_t buffer[256];
+    int bytes_read = this->socket.read (buffer, 256);
+    Serial.printf ("Bytes read: %d\n", bytes_read);
 
+    Serial.print ("Bytes: ");
+    zmtp_debug_dump (buffer, bytes_read);
+
+    switch (this->state) {
+      case SIG_WAIT:
+      case SIG_ACK:
+      case VER_ACK:
+      case GRT_ACK:
+        this->state = parse_greeting (this->state, buffer, bytes_read);
+
+        this->print ();
+
+        if (this->state == GRT_ACK) {
+          Serial.println ("Received ZMTP greeting.");
+          this->sendHandshake ();
+          this->state = READY_WAIT;
+        }
+        break;
+
+      case READY_WAIT:
+        this->state = parse_handshake (buffer, bytes_read);
+        if (this->state == READY) {
+          Serial.println ("Received ZMTP handshake.");
+        }
+        break;
+
+      case READY:
+        Serial.println ("Message frame.");
+        break;
+
+      case INIT:
+      case _ERROR:
+      default:
+        break;
+    }
+  }
+}
+
+void ZMTPSocket::send (zmtp_frame_t *frame) {
+  assert (this->state == READY);
+  assert (frame);
+
+  this->socket.write (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
+  this->socket.flush ();
+}
+
+void ZMTPSocket::print () {
+  zmtp_debug_dump (this->type);
+  zmtp_debug_dump (this->state);
+}
+
+void ZMTPSocket::sendHandshake () {
   uint8_t handshake[60];
 
   // command-size
@@ -196,74 +221,12 @@ void zmtp_send_handshake (zmtp_socket_t *self) {
   handshake[30] = 8;
   memcpy (handshake + 31, "Identity", 8);
   memset (handshake + 39, 0, 4);
-  handshake[42] = 17;
+  handshake[42] = this->identity_size + 1;
   handshake[43] = 1;
-  memcpy (handshake + 44, zmtp_uuid_bytes (self->uuid), 16);
+  memcpy (handshake + 44, this->identity, this->identity_size);
 
   zmtp_debug_dump (handshake, 60);
 
-  self->socket->write (handshake, 60);
-  self->socket->flush ();
-}
-
-void zmtp_socket_update (zmtp_socket_t *self) {
-  assert (self);
-
-  if (self->socket->available ()) {
-    uint8_t buffer[256];
-    int bytes_read = self->socket->read (buffer, 256);
-    Serial.printf ("Bytes read: %d\n", bytes_read);
-
-    Serial.print ("Bytes: ");
-    zmtp_debug_dump (buffer, bytes_read);
-
-    switch (self->state) {
-      case SIG_WAIT:
-      case SIG_ACK:
-      case VER_ACK:
-      case GRT_ACK:
-        self->state = parse_greeting (self->state, buffer, bytes_read);
-
-        zmtp_socket_dump (self);
-
-        if (self->state == GRT_ACK) {
-          Serial.println ("Received ZMTP greeting.");
-          zmtp_send_handshake (self);
-          self->state = READY_WAIT;
-        }
-        break;
-
-      case READY_WAIT:
-        self->state = parse_handshake (buffer, bytes_read);
-        if (self->state == READY) {
-          Serial.println ("Received ZMTP handshake.");
-        }
-        break;
-
-      case READY:
-        Serial.println ("Message frame.");
-        break;
-
-      case INIT:
-      case _ERROR:
-      default:
-        break;
-    }
-  }
-}
-
-void zmtp_socket_send (zmtp_socket_t *self, zmtp_frame_t *frame) {
-  assert (self);
-  assert (self->state == READY);
-  assert (frame);
-
-  self->socket->write (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
-  self->socket->flush ();
-}
-
-void zmtp_socket_dump (zmtp_socket_t *self) {
-  assert (self);
-
-  zmtp_debug_dump (self->type);
-  zmtp_debug_dump (self->state);
+  this->socket.write (handshake, 60);
+  this->socket.flush ();
 }
