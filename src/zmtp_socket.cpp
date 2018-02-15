@@ -144,7 +144,7 @@ bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
 }
 
 void ZMTPSocket::update () {
-  if (this->socket.available ()) {
+  while (this->socket.available ()) {
     uint8_t buffer[256];
     int bytes_read = this->socket.read (buffer, 256);
     Serial.printf ("Bytes read: %d\n", bytes_read);
