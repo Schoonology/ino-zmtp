@@ -27,7 +27,7 @@ int main(int argc, char const *argv[])
   //
   // Identity frame
   //
-  printf ("Client should provide a 16-octet UUID: ");
+  printf ("Client should provide an Identity: ");
   size_t msg_size = zmsg_size (greeting);
   if (msg_size != 2) {
     printf("✘ — Invalid number of frames (%lu)\n", msg_size);
@@ -35,16 +35,15 @@ int main(int argc, char const *argv[])
   }
 
   char * uuid = zmsg_popstr (greeting);
-  // TODO(schoon) - Remove ZRE-assuming 17th byte.
-  // TODO(schoon) - Test and allow arbitrary identities.
-  if (!streq (uuid, "\x01\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10")) {
-    printf("✘ — Invalid UUID (%s)\n", uuid);
+  if (!streq (uuid, "Photon")) {
+    printf("✘ — Invalid Identity (%s)\n", uuid);
     BAIL();
   }
   printf ("✔\n");
+  free (uuid);
 
   //
-  // Message frame
+  // Message frames
   //
   printf ("Client should provide a 5-octet message: ");
   char * message = zmsg_popstr (greeting);
@@ -53,7 +52,11 @@ int main(int argc, char const *argv[])
     BAIL();
   }
   printf ("✔\n");
+  free (message);
 
+  //
+  // Cleanup
+  //
   printf ("Tearing down.\n");
   zsock_destroy (&socket);
   return 0;

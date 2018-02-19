@@ -128,13 +128,15 @@ bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
 
     zmtp_debug_dump (greeting, 64);
 
-    this->socket.write (greeting, 64);
+    int written = this->socket.write (greeting, 64);
+    Serial.printf ("Bytes written: %i\n", written);
     this->socket.flush ();
 
     this->state = SIG_WAIT;
   } else {
     Serial.println ("Failed to connect.");
 
+    // TODO(schoon) - Retry.
     this->state = _ERROR;
   }
 
@@ -191,7 +193,9 @@ void ZMTPSocket::send (zmtp_frame_t *frame) {
   assert (this->state == READY);
   assert (frame);
 
-  this->socket.write (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
+  zmtp_debug_dump (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
+  int written = this->socket.write (zmtp_frame_bytes (frame), zmtp_frame_size (frame));
+  Serial.printf ("Bytes written: %i\n", written);
   this->socket.flush ();
 }
 
@@ -201,11 +205,13 @@ void ZMTPSocket::print () {
 }
 
 void ZMTPSocket::sendHandshake () {
-  uint8_t handshake[60];
+  size_t handshake_size = 43 + this->identity_size;
+  uint8_t handshake[handshake_size];
+  memset (handshake, 0, handshake_size);
 
   // command-size
   handshake[0] = 0x04;
-  handshake[1] = 58;
+  handshake[1] = handshake_size - 2;
 
   // ready
   handshake[2] = 0x05;
@@ -214,19 +220,17 @@ void ZMTPSocket::sendHandshake () {
   // metadata
   handshake[8] = 11;
   memcpy (handshake + 9, "Socket-Type", 11);
-  memset (handshake + 20, 0, 4);
   handshake[23] = 6;
   memcpy (handshake + 24, "DEALER", 6);
 
   handshake[30] = 8;
   memcpy (handshake + 31, "Identity", 8);
-  memset (handshake + 39, 0, 4);
-  handshake[42] = this->identity_size + 1;
-  handshake[43] = 1;
-  memcpy (handshake + 44, this->identity, this->identity_size);
+  handshake[42] = this->identity_size;
+  memcpy (handshake + 43, this->identity, this->identity_size);
 
-  zmtp_debug_dump (handshake, 60);
+  zmtp_debug_dump (handshake, handshake_size);
 
-  this->socket.write (handshake, 60);
-  this->socket.flush ();
+  int written = this->socket.write (handshake, handshake_size);
+  Serial.printf ("Bytes written: %i\n", written);
+  this->socket.flush();
 }
