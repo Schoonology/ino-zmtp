@@ -19,6 +19,7 @@ typedef enum {
 // Internal states.
 typedef enum {
   INIT = 0,   // New connection
+  CONNECTING, // Trying to connect
   SIG_WAIT,   // ZMTP signature sent
   SIG_ACK,    // ZMTP signature acknowledged
   VER_ACK,    // ZMTP version acknowledged
@@ -63,6 +64,8 @@ public:
 private:
   void sendHandshake ();
 
+  uint8_t peer_address[4];
+  uint16_t peer_port;
   zmtp_socket_type_t type;
   zmtp_socket_state_t state;
   uint8_t *identity;

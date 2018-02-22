@@ -100,10 +100,15 @@ bool ZMTPSocket::ready () {
 }
 
 bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
-  assert (this->state == INIT);
+  assert (this->state == INIT || this->state == CONNECTING);
   assert (addr);
 
-  bool success = this->socket.connect (IPAddress (addr), port);
+  if (addr != this->peer_address) {
+    memcpy (this->peer_address, addr, 4);
+    this->peer_port = port;
+  }
+
+  bool success = this->socket.connect (IPAddress (this->peer_address), port);
 
   if (success) {
     Serial.println ("Connected.");
@@ -136,8 +141,7 @@ bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
   } else {
     Serial.println ("Failed to connect.");
 
-    // TODO(schoon) - Retry.
-    this->state = _ERROR;
+    this->state = CONNECTING;
   }
 
   this->print ();
@@ -146,6 +150,10 @@ bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
 }
 
 void ZMTPSocket::update () {
+  if (this->state == CONNECTING) {
+    this->connect(this->peer_address, this->peer_port);
+  }
+
   while (this->socket.available ()) {
     uint8_t buffer[256];
     int bytes_read = this->socket.read (buffer, 256);

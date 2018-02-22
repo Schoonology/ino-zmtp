@@ -58,6 +58,8 @@ int main(int argc, char const *argv[])
   // Cleanup
   //
   printf ("Tearing down.\n");
+  zmsg_destroy (&greeting);
+  zmsg_destroy (&duplicate);
   zsock_destroy (&socket);
   return 0;
 }
