@@ -76,6 +76,7 @@ ZMTPSocket::ZMTPSocket (zmtp_socket_type_t type) {
   this->state = INIT;
   this->identity = NULL;
   this->identity_size = 0;
+  this->server = NULL;
 }
 
 ZMTPSocket::~ZMTPSocket () {
@@ -83,6 +84,7 @@ ZMTPSocket::~ZMTPSocket () {
 }
 
 void ZMTPSocket::setIdentity (uint8_t *data, size_t size) {
+  assert (this->type == DEALER);
   assert (data);
   assert (size < 256);
 
@@ -100,6 +102,7 @@ bool ZMTPSocket::ready () {
 }
 
 bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
+  assert (this->type == DEALER);
   assert (this->state == INIT || this->state == CONNECTING);
   assert (addr);
 
@@ -113,31 +116,7 @@ bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
   if (success) {
     Serial.println ("Connected.");
 
-    assert (this->type == DEALER);
-    uint8_t greeting[64];
-    memset (greeting, 0, 64);
-
-    // signature
-    greeting[0] = 0xFF;
-    greeting[9] = 0x7F;
-
-    // version
-    greeting[10] = 0x03;
-    greeting[11] = 0x00;
-
-    // mechanism
-    memcpy (greeting + 12, "NULL", 4);
-
-    // as-server
-    greeting[32] = 0x00;
-
-    zmtp_debug_dump (greeting, 64);
-
-    int written = this->socket.write (greeting, 64);
-    Serial.printf ("Bytes written: %i\n", written);
-    this->socket.flush ();
-
-    this->state = SIG_WAIT;
+    this->sendGreeting ();
   } else {
     Serial.println ("Failed to connect.");
 
@@ -149,9 +128,34 @@ bool ZMTPSocket::connect (uint8_t *addr, uint16_t port) {
   return success;
 }
 
+void ZMTPSocket::bind (uint16_t port) {
+  assert (this->type == ROUTER);
+  assert (this->state == INIT);
+
+  this->server = new TCPServer(port);
+  assert (this->server);
+
+  this->server->begin();
+  this->state = LISTENING;
+  Serial.printf ("Listening on port %u...\n", port);
+}
+
 void ZMTPSocket::update () {
+  Particle.process();
+
   if (this->state == CONNECTING) {
     this->connect(this->peer_address, this->peer_port);
+  }
+
+  if (!this->socket.connected()) {
+    if (this->state == LISTENING) {
+      this->socket = this->server->available();
+      Serial.println ("Client acquired.");
+
+      this->sendGreeting ();
+      this->print ();
+    }
+    return;
   }
 
   while (this->socket.available ()) {
@@ -187,6 +191,7 @@ void ZMTPSocket::update () {
 
       case READY:
         Serial.println ("Message frame.");
+        this->frame_queue.append (zmtp_frame_new (buffer + 2, buffer[1], (zmtp_frame_flags_t) buffer[0]));
         break;
 
       case INIT:
@@ -207,9 +212,48 @@ void ZMTPSocket::send (zmtp_frame_t *frame) {
   this->socket.flush ();
 }
 
+zmtp_frame_t * ZMTPSocket::recv () {
+  assert (this->state == READY);
+
+  this->update();
+
+  if (!this->frame_queue.size()) {
+    return NULL;
+  }
+
+  return this->frame_queue.takeFirst();
+}
+
 void ZMTPSocket::print () {
   zmtp_debug_dump (this->type);
   zmtp_debug_dump (this->state);
+}
+
+void ZMTPSocket::sendGreeting () {
+  uint8_t greeting[64];
+  memset (greeting, 0, 64);
+
+  // signature
+  greeting[0] = 0xFF;
+  greeting[9] = 0x7F;
+
+  // version
+  greeting[10] = 0x03;
+  greeting[11] = 0x00;
+
+  // mechanism
+  memcpy (greeting + 12, "NULL", 4);
+
+  // as-server
+  greeting[32] = this->type == DEALER ? 0x00 : 0x01;
+
+  zmtp_debug_dump (greeting, 64);
+
+  int written = this->socket.write (greeting, 64);
+  Serial.printf ("Bytes written: %i\n", written);
+  this->socket.flush ();
+
+  this->state = SIG_WAIT;
 }
 
 void ZMTPSocket::sendHandshake () {
@@ -229,7 +273,11 @@ void ZMTPSocket::sendHandshake () {
   handshake[8] = 11;
   memcpy (handshake + 9, "Socket-Type", 11);
   handshake[23] = 6;
-  memcpy (handshake + 24, "DEALER", 6);
+  if (this->type == DEALER) {
+    memcpy (handshake + 24, "DEALER", 6);
+  } else {
+    memcpy (handshake + 24, "ROUTER", 6);
+  }
 
   handshake[30] = 8;
   memcpy (handshake + 31, "Identity", 8);
