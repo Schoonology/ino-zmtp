@@ -188,8 +188,7 @@ void ZMTPSocket::update() {
 
     case READY:
       Serial.println("Message frame.");
-      this->frame_queue.append(
-          zmtp_frame_new(buffer + 2, buffer[1], (zmtp_frame_flags_t)buffer[0]));
+      this->frame_queue.append(new ZMTPFrame(buffer));
       break;
 
     case INIT:
@@ -200,18 +199,17 @@ void ZMTPSocket::update() {
   }
 }
 
-void ZMTPSocket::send(zmtp_frame_t *frame) {
+void ZMTPSocket::send(ZMTPFrame *frame) {
   assert(this->state == READY);
   assert(frame);
 
-  zmtp_debug_dump(zmtp_frame_bytes(frame), zmtp_frame_size(frame));
-  int written =
-      this->socket.write(zmtp_frame_bytes(frame), zmtp_frame_size(frame));
+  frame->print();
+  int written = this->socket.write(frame->wireData(), frame->wireSize());
   Serial.printf("Bytes written: %i\n", written);
   this->socket.flush();
 }
 
-zmtp_frame_t *ZMTPSocket::recv() {
+ZMTPFrame *ZMTPSocket::recv() {
   assert(this->state == READY);
 
   this->update();

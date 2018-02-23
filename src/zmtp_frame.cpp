@@ -3,79 +3,66 @@
 
 #define ZMTP_FRAMING_OCTETS 2
 
-struct _zmtp_frame_t {
-  uint8_t *buffer;
-};
-
-zmtp_frame_t *zmtp_frame_new(const uint8_t *data, uint8_t size) {
-  return zmtp_frame_new(data, size, ZMTP_FRAME_NONE);
-}
-
-zmtp_frame_t *zmtp_frame_new(const uint8_t *data, uint8_t size,
-                             zmtp_frame_flags_t flags) {
-  zmtp_frame_t *self = (zmtp_frame_t *)malloc(sizeof(zmtp_frame_t));
-  assert(self);
-
+// Create a new ZMTP frame with the specified size. If data is provided,
+// it will be copied into the frame. The provided flags will be set
+// and sent along with the frame.
+ZMTPFrame::ZMTPFrame(const uint8_t *data, uint8_t size,
+                     zmtp_frame_flags_t flags) {
   if (data) {
-    self->buffer = (uint8_t *)malloc(size + ZMTP_FRAMING_OCTETS);
-    assert(self->buffer);
+    this->buffer = (uint8_t *)malloc(size + ZMTP_FRAMING_OCTETS);
+    assert(this->buffer);
 
-    self->buffer[0] = flags;
-    self->buffer[1] = size;
+    this->buffer[0] = flags;
+    this->buffer[1] = size;
 
-    memcpy(self->buffer + ZMTP_FRAMING_OCTETS, data, size);
+    memcpy(this->buffer + ZMTP_FRAMING_OCTETS, data, size);
   } else {
-    self->buffer = NULL;
-  }
-
-  return self;
-}
-
-void zmtp_frame_destroy(zmtp_frame_t **self_p) {
-  assert(self_p);
-
-  if (*self_p) {
-    zmtp_frame_t *self = *self_p;
-
-    if (self->buffer) {
-      free(self->buffer);
-    }
-
-    free(self);
-    *self_p = NULL;
+    this->buffer = NULL;
   }
 }
 
-void zmtp_frame_flags(zmtp_frame_t *self, zmtp_frame_flags_t flags) {
-  assert(self);
+// Create a new ZMTP frame from the specified, null-terminated string. The
+// provided flags will be set and sent along with the frame.
+ZMTPFrame::ZMTPFrame(const char *str, zmtp_frame_flags_t flags)
+    : ZMTPFrame((const uint8_t *)str, strlen(str), flags) {}
 
-  if (self->buffer) {
-    self->buffer[0] = flags;
+// Create a new ZMTP frame from the specified, null-terminated string. The
+// provided flags will be set and sent along with the frame.
+ZMTPFrame::ZMTPFrame(const uint8_t *wireData)
+    : ZMTPFrame(wireData + 2, wireData[1], (zmtp_frame_flags_t)wireData[0]) {}
+
+// Destroy a frame.
+ZMTPFrame::~ZMTPFrame() {
+  if (this->buffer) {
+    free(this->buffer);
   }
 }
 
-uint8_t zmtp_frame_size(zmtp_frame_t *self) {
-  assert(self);
-
-  if (self->buffer) {
-    return self->buffer[1] + ZMTP_FRAMING_OCTETS;
+// Return the size, in bytes, of the frame.
+size_t ZMTPFrame::size() {
+  if (this->buffer) {
+    return this->buffer[1];
   } else {
     return 0;
   }
 }
 
-uint8_t *zmtp_frame_bytes(zmtp_frame_t *self) {
-  assert(self);
+// Return the size, in bytes, of the frame, _including_ framing bytes.
+size_t ZMTPFrame::wireSize() { return this->size() + ZMTP_FRAMING_OCTETS; }
 
-  return self->buffer;
+// Return a pointer to the data in the frame.
+const uint8_t *ZMTPFrame::data() {
+  return this->wireData() + ZMTP_FRAMING_OCTETS;
 }
 
-void zmtp_frame_dump(zmtp_frame_t *self) {
-  assert(self);
+// Return a pointer to the data in the frame, _including_ framing bytes.
+const uint8_t *ZMTPFrame::wireData() { return this->buffer; }
 
-  if (self->buffer) {
-    zmtp_debug_dump(self->buffer, ZMTP_FRAMING_OCTETS);
-    zmtp_debug_dump(self->buffer + ZMTP_FRAMING_OCTETS, self->buffer[1]);
+// Dump internal state for debugging.
+void ZMTPFrame::print() {
+  if (this->buffer) {
+    zmtp_debug_dump(this->buffer, ZMTP_FRAMING_OCTETS);
+    zmtp_debug_dump(this->buffer + ZMTP_FRAMING_OCTETS, this->buffer[1]);
   } else {
     zmtp_debug_dump("Empty frame");
   }

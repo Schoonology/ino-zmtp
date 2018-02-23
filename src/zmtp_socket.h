@@ -61,11 +61,11 @@ public:
   void update();
 
   // Send the frame through this socket.
-  void send(zmtp_frame_t *frame);
+  void send(ZMTPFrame *frame);
 
   // Receives the next frame from the socket, or NULL if no frame is
   // available.
-  zmtp_frame_t *recv();
+  ZMTPFrame *recv();
 
   // Dump internal state for debugging.
   void print();
@@ -83,7 +83,7 @@ private:
   // TODO(schoon) - For server sockets, use a vector of clients.
   TCPClient socket;
   TCPServer *server;
-  Vector<zmtp_frame_t *> frame_queue;
+  Vector<ZMTPFrame *> frame_queue;
 };
 
 #endif

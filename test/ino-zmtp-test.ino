@@ -2,8 +2,8 @@
 
 SYSTEM_MODE(MANUAL);
 
-void waitUntilReady(ZMTPSocket &socket) {
-  System.waitCondition(
+bool waitUntilReady(ZMTPSocket &socket) {
+  return System.waitCondition(
       [&]() {
         // Removing this will crash the application, as socket.ready()
         // returns true, but socket.recv() won't agree.
@@ -14,10 +14,12 @@ void waitUntilReady(ZMTPSocket &socket) {
       5000);
 }
 
-zmtp_frame_t *waitUntilRecv(ZMTPSocket &socket) {
-  waitUntilReady(socket);
+ZMTPFrame *waitUntilRecv(ZMTPSocket &socket) {
+  if (!waitUntilReady(socket)) {
+    return NULL;
+  }
 
-  zmtp_frame_t *frame = NULL;
+  ZMTPFrame *frame = NULL;
   unsigned long startTime = millis();
   do {
     socket.update();
@@ -51,21 +53,21 @@ void runDealerTest(uint8_t *address) {
   uint8_t identity[6] = {'P', 'h', 'o', 't', 'o', 'n'};
   dealer.setIdentity(identity, 6);
 
-  waitUntilReady(dealer);
+  if (!waitUntilReady(dealer)) {
+    Serial.println("Dealer was not ready in time.");
+    end();
+  }
 
   {
-    uint8_t data[5] = {'H', 'e', 'l', 'l', 'o'};
-    zmtp_frame_t *frame = zmtp_frame_new(data, 5);
-    dealer.send(frame);
-    zmtp_frame_destroy(&frame);
+    ZMTPFrame frame("Hello", ZMTP_FRAME_NONE);
+    dealer.send(&frame);
   }
 
   {
     IPAddress localIP = WiFi.localIP();
     uint8_t localIPBytes[4] = {localIP[0], localIP[1], localIP[2], localIP[3]};
-    zmtp_frame_t *frame = zmtp_frame_new(localIPBytes, 4);
-    dealer.send(frame);
-    zmtp_frame_destroy(&frame);
+    ZMTPFrame frame(localIPBytes, 4, ZMTP_FRAME_NONE);
+    dealer.send(&frame);
   }
 }
 
@@ -74,26 +76,23 @@ void runRouterTest() {
 
   router.bind(1235);
 
-  zmtp_frame_t *question = waitUntilRecv(router);
+  ZMTPFrame *question = waitUntilRecv(router);
+  if (!question) {
+    Serial.println("Router did not receive message in time.");
+    end();
+  }
 
   // TODO(schoon) - Receive identity frame first.
-  // HACK(schoon) - The zmtp_frame API doesn't tell us about framing, so
-  // we have to manually account for it here.
-  uint8_t question_size = zmtp_frame_size(question) - 2;
-  const char *question_bytes = (const char *)(zmtp_frame_bytes(question) + 2);
-  Serial.printf("Received bytes: %u\n", question_size);
-
-  if (strcmp(question_bytes, "Answer?") != 0) {
+  Serial.printf("Received bytes: %u\n", question->size());
+  if (strcmp((const char *)question->data(), "Answer?") != 0) {
     Serial.println("Invalid bytes received.");
     end();
   }
 
   {
     // TODO(schoon) - "Send" identity frame first.
-    uint8_t data[2] = {'4', '2'};
-    zmtp_frame_t *frame = zmtp_frame_new(data, 2);
-    router.send(frame);
-    zmtp_frame_destroy(&frame);
+    ZMTPFrame frame("42", ZMTP_FRAME_NONE);
+    router.send(&frame);
   }
 }
 
@@ -104,9 +103,6 @@ void setup() {
   uint8_t address[4] = {172, 20, 10, 3};
   runDealerTest(address);
   runRouterTest();
-
-  // Allow time for network to catch up before we hard disconnect.
-  delay(1000);
 
   end();
 }
