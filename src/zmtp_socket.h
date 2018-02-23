@@ -9,7 +9,6 @@
 
 #include "arch.h"
 #include "zmtp_frame.h"
-#include "zmtp_uuid.h"
 
 // Socket types supported by ZMTP sockets.
 typedef enum {
