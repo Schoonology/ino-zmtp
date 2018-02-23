@@ -13,19 +13,19 @@
 typedef struct _zmtp_uuid_t zmtp_uuid_t;
 
 // Create a new, random UUID.
-zmtp_uuid_t *zmtp_uuid_new ();
+zmtp_uuid_t *zmtp_uuid_new();
 
 // Destroy a UUID.
-void zmtp_uuid_destroy (zmtp_uuid_t **self_p);
+void zmtp_uuid_destroy(zmtp_uuid_t **self_p);
 
 // Compare two UUIDs, returning true if the two are equal,
 // false otherwise.
-bool zmtp_uuid_equal (zmtp_uuid_t *first, zmtp_uuid_t *second);
+bool zmtp_uuid_equal(zmtp_uuid_t *first, zmtp_uuid_t *second);
 
 // Return a pointer to the underlying 16 bytes.
-uint8_t *zmtp_uuid_bytes (zmtp_uuid_t *self);
+uint8_t *zmtp_uuid_bytes(zmtp_uuid_t *self);
 
 // Dump internal state.
-void zmtp_uuid_dump (zmtp_uuid_t *self);
+void zmtp_uuid_dump(zmtp_uuid_t *self);
 
 #endif

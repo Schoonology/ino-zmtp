@@ -4,9 +4,9 @@
  */
 
 #if defined(ARDUINO) && ARDUINO >= 100
-  #include "Arduino.h"
+#include "Arduino.h"
 #elif defined(SPARK)
-  #include "application.h"
+#include "application.h"
 #else
-  #error Only ARDUINO or SPARK supported.
+#error Only ARDUINO or SPARK supported.
 #endif

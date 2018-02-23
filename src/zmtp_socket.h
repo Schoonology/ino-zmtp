@@ -35,45 +35,45 @@ class ZMTPSocket {
 public:
   // Create a new socket of the specified type. This socket will not
   // be able to send or receive frames until it is connected.
-  ZMTPSocket (zmtp_socket_type_t type);
+  ZMTPSocket(zmtp_socket_type_t type);
 
   // Destroy a socket.
-  ~ZMTPSocket ();
+  ~ZMTPSocket();
 
   // Set the "identity" associated with this socket. The identity may
   // be any bytes in length, and will be copied into the internal state.
-  void setIdentity (uint8_t *data, size_t size);
+  void setIdentity(uint8_t *data, size_t size);
 
   // Return true if the socket is connected and the ZMTP handshake
   // has completed, and false otherwise. Has no side effects; call
   // `update` to update internal state.
-  bool ready ();
+  bool ready();
 
   // Connect the ZMTP socket to the TCP port at the specified port
   // and address. The address should be 4 bytes in length.
-  bool connect (uint8_t *addr, uint16_t port);
+  bool connect(uint8_t *addr, uint16_t port);
 
   // Bind the ZMTP socket to the specified TCP port, listening for
   // incoming connections.
-  void bind (uint16_t port);
+  void bind(uint16_t port);
 
   // Update the internal ZMTP state. This should be called periodically
   // to read received data.
-  void update ();
+  void update();
 
   // Send the frame through this socket.
-  void send (zmtp_frame_t *frame);
+  void send(zmtp_frame_t *frame);
 
   // Receives the next frame from the socket, or NULL if no frame is
   // available.
-  zmtp_frame_t * recv ();
+  zmtp_frame_t *recv();
 
   // Dump internal state for debugging.
-  void print ();
+  void print();
 
 private:
-  void sendGreeting ();
-  void sendHandshake ();
+  void sendGreeting();
+  void sendHandshake();
 
   uint8_t peer_address[4];
   uint16_t peer_port;

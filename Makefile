@@ -1,4 +1,4 @@
-.PHONY: test
+.PHONY: format test watch
 
 test.bin: src/* test/*
 	particle compile photon . --saveTo test.bin
@@ -12,3 +12,9 @@ local-tester: test/local-tester.cpp
 test: test.bin local-helper
 	particle flash --usb test.bin
 	./local-helper
+
+format:
+	clang-format -i src/* test/*
+
+watch:
+	rg --files | entr -rc make format test
