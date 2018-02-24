@@ -2,29 +2,24 @@
 
 SYSTEM_MODE(MANUAL);
 
-bool waitUntilReady(ZMTPSocket &socket) {
-  return System.waitCondition(
-      [&]() {
-        // Removing this will crash the application, as socket.ready()
-        // returns true, but socket.recv() won't agree.
-        delay(100);
-        socket.update();
-        return socket.ready();
-      },
-      5000);
+unsigned long TIMEOUT = 30000;
+
+bool waitUntilSend(ZMTPSocket &socket, ZMTPFrame *frame) {
+  bool success = false;
+  unsigned long startTime = millis();
+  do {
+    success = socket.send(frame);
+  } while (millis() - startTime < TIMEOUT && !success);
+
+  return success;
 }
 
 ZMTPFrame *waitUntilRecv(ZMTPSocket &socket) {
-  if (!waitUntilReady(socket)) {
-    return NULL;
-  }
-
   ZMTPFrame *frame = NULL;
   unsigned long startTime = millis();
   do {
-    socket.update();
     frame = socket.recv();
-  } while (startTime - millis() < 5000 && !frame);
+  } while (millis() - startTime < TIMEOUT && !frame);
 
   return frame;
 }
@@ -44,37 +39,36 @@ void enableWiFi() {
 }
 
 void runDealerTest(uint8_t *address) {
-  ZMTPSocket dealer(DEALER);
-
   Serial.printf("Connecting to: %i.%i.%i.%i\n", address[0], address[1],
                 address[2], address[3]);
-  dealer.connect(address, 1234);
+  ZMTPDealer dealer(address, 1234);
 
   uint8_t identity[6] = {'P', 'h', 'o', 't', 'o', 'n'};
   dealer.setIdentity(identity, 6);
 
-  if (!waitUntilReady(dealer)) {
-    Serial.println("Dealer was not ready in time.");
-    end();
-  }
-
   {
     ZMTPFrame frame("Hello", ZMTP_FRAME_NONE);
-    dealer.send(&frame);
+
+    if (!waitUntilSend(dealer, &frame)) {
+      Serial.println("Dealer did not send greeting in time.");
+      end();
+    }
   }
 
   {
     IPAddress localIP = WiFi.localIP();
     uint8_t localIPBytes[4] = {localIP[0], localIP[1], localIP[2], localIP[3]};
     ZMTPFrame frame(localIPBytes, 4, ZMTP_FRAME_NONE);
-    dealer.send(&frame);
+
+    if (!waitUntilSend(dealer, &frame)) {
+      Serial.println("Dealer did not send IP address in time.");
+      end();
+    }
   }
 }
 
 void runRouterTest() {
-  ZMTPSocket router(ROUTER);
-
-  router.bind(1235);
+  ZMTPRouter router(1235);
 
   ZMTPFrame *question = waitUntilRecv(router);
   if (!question) {
