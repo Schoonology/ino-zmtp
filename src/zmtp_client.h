@@ -32,6 +32,11 @@ public:
 
   ~ZMTPClient();
 
+  // Retrieves the identity of this or the attached peer, represented
+  // as a Frame.
+  const ZMTPFrame *getIdentity();
+
+  // Assigns the identity of this or the attached peer as A Frame.
   void setIdentity(uint8_t *data, size_t size);
 
   // Update the internal ZMTP state. This should be called periodically
@@ -55,8 +60,7 @@ private:
 
   TCPClient client;
   uint8_t *frameBuffer;
-  uint8_t *identity;
-  size_t identitySize;
+  ZMTPFrame *identity;
   IPAddress peerAddress;
   uint16_t peerPort;
   Vector<ZMTPFrame *> receivedFrames;

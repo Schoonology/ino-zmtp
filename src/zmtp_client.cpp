@@ -65,8 +65,28 @@ zmtp_client_state_t parseHandshake(uint8_t *buffer, int length) {
     return _ERROR;
   }
 
-  if (buffer[2] != 0x05 || !memcpy(buffer + 3, "READY", 5)) {
+  if (buffer[2] != 0x05 || memcmp(buffer + 3, "READY", 5)) {
     return _ERROR;
+  }
+
+  int offset = 8;
+  while (offset < length) {
+    uint8_t keySize = buffer[offset];
+    char key[keySize];
+    memcpy(key, buffer + offset + 1, keySize);
+
+    offset = offset + keySize + 1;
+
+    // TODO(schoon) - Handle value sizes (sets and gets) over 256.
+    uint8_t valueSize = buffer[offset + 3];
+    char value[valueSize];
+    memcpy(value, buffer + offset + 4, valueSize);
+
+    offset = offset + valueSize + 4;
+
+    if (memcmp(key, "Identity", keySize) == 0) {
+      this->setIdentity(value, valueSize);
+    }
   }
 
   return READY;
@@ -74,8 +94,7 @@ zmtp_client_state_t parseHandshake(uint8_t *buffer, int length) {
 
 ZMTPClient::ZMTPClient(zmtp_client_type_t type, uint8_t *addr, uint16_t port) {
   this->frameBuffer = new uint8_t[256];
-  this->identity = NULL;
-  this->identitySize = 0;
+  this->identity = new ZMTPFrame(NULL, 0, ZMTP_FRAME_NONE);
   this->peerAddress = IPAddress(addr);
   this->peerPort = port;
   this->state = CONNECTING;
@@ -85,50 +104,39 @@ ZMTPClient::ZMTPClient(zmtp_client_type_t type, uint8_t *addr, uint16_t port) {
 ZMTPClient::ZMTPClient(zmtp_client_type_t type, TCPClient client) {
   this->client = client;
   this->frameBuffer = new uint8_t[256];
-  this->identity = NULL;
-  this->identitySize = 0;
+  this->identity = new ZMTPFrame(NULL, 0, ZMTP_FRAME_NONE);
   this->state = INIT;
   this->type = type;
 }
 
 ZMTPClient::~ZMTPClient() {
   delete this->frameBuffer;
-
-  if (this->identity) {
-    delete this->identity;
-  }
+  delete this->identity;
 }
+
+const ZMTPFrame *ZMTPClient::getIdentity() { return this->identity; }
 
 void ZMTPClient::setIdentity(uint8_t *data, size_t size) {
   assert(data);
   assert(size < 256);
 
-  if (this->identity) {
-    delete this->identity;
-  }
+  delete this->identity;
 
-  this->identity = new uint8_t[size];
-  memcpy(this->identity, data, size);
-  this->identitySize = size;
+  this->identity = new ZMTPFrame(data, size, ZMTP_FRAME_NONE);
 }
 
 void ZMTPClient::update() {
   Particle.process();
 
-  Serial.println("Attempting to connect.");
   if (this->state == CONNECTING &&
       this->client.connect(this->peerAddress, this->peerPort)) {
-    Serial.println("Connected.");
     this->state = INIT;
   }
 
   // Guard
   if (!this->client.connected()) {
-    Serial.println("Not connected.");
     return;
   }
-
-  Serial.println("Moving on...");
 
   if (this->state == INIT) {
     this->sendGreeting();
@@ -235,7 +243,7 @@ void ZMTPClient::sendGreeting() {
 void ZMTPClient::sendHandshake() {
   Serial.println("Sending handshake...");
 
-  size_t handshake_size = 43 + identitySize;
+  size_t handshake_size = 43 + this->identity->size();
   uint8_t *handshake = new uint8_t[handshake_size];
   memset(handshake, 0, handshake_size);
 
@@ -259,8 +267,8 @@ void ZMTPClient::sendHandshake() {
 
   handshake[30] = 8;
   memcpy(handshake + 31, "Identity", 8);
-  handshake[42] = identitySize;
-  memcpy(handshake + 43, identity, identitySize);
+  handshake[42] = this->identity->size();
+  memcpy(handshake + 43, this->identity->data(), this->identity->size());
 
   zmtp_debug_dump(handshake, handshake_size);
 
