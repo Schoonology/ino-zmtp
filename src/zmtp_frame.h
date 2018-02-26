@@ -33,6 +33,9 @@ public:
   // Destroy a frame.
   ~ZMTPFrame();
 
+  // Return the flags associated with this frame, e.g. ZMTP_FRAME_MORE.
+  zmtp_frame_flags_t flags();
+
   // Return the size, in bytes, of the frame.
   size_t size();
 

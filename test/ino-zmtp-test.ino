@@ -70,24 +70,36 @@ void runDealerTest(uint8_t *address) {
 void runRouterTest() {
   ZMTPRouter router(1235);
 
-  ZMTPFrame *question = waitUntilRecv(router);
-  if (!question) {
-    Serial.println("Router did not receive message in time.");
+  ZMTPFrame *identity = waitUntilRecv(router);
+  if (!identity) {
+    Serial.println("Router did not receive identity frame in time.");
     end();
   }
 
-  // TODO(schoon) - Receive identity frame first.
+  Serial.printf("Received bytes: %u\n", identity->size());
+  if (identity->size() != 6 ||
+      memcmp(identity->data(), "Helper", identity->size()) != 0) {
+    Serial.println("Invalid identity received.");
+    end();
+  }
+
+  ZMTPFrame *question = waitUntilRecv(router);
+  if (!question) {
+    Serial.println("Router did not receive message frame in time.");
+    end();
+  }
+
   Serial.printf("Received bytes: %u\n", question->size());
-  if (strcmp((const char *)question->data(), "Answer?") != 0) {
+  if (question->size() != 7 ||
+      memcmp(question->data(), "Answer?", question->size()) != 0) {
     Serial.println("Invalid bytes received.");
     end();
   }
 
-  {
-    // TODO(schoon) - "Send" identity frame first.
-    ZMTPFrame frame("42", ZMTP_FRAME_NONE);
-    router.send(&frame);
-  }
+  router.send(identity);
+
+  ZMTPFrame frame("42", ZMTP_FRAME_NONE);
+  router.send(&frame);
 }
 
 void setup() {

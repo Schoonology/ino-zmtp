@@ -34,7 +34,7 @@ public:
 
   // Retrieves the identity of this or the attached peer, represented
   // as a Frame.
-  const ZMTPFrame *getIdentity();
+  ZMTPFrame *getIdentity();
 
   // Assigns the identity of this or the attached peer as A Frame.
   void setIdentity(uint8_t *data, size_t size);
@@ -47,14 +47,21 @@ public:
   // succesful, false otherwise.
   bool send(ZMTPFrame *frame);
 
-  // Returns the next frame already received through the socket, or
-  // NULL if no frame is available.
+  // Returns a reference to the next frame already received through the
+  // socket, or NULL if no frame is available. Does not pop the frame
+  // from the internal message queue.
+  ZMTPFrame *peek();
+
+  // Pops and returns the next frame already received through the socket,
+  // or NULL if no frame is available.
   ZMTPFrame *recv();
 
   // Dump internal state for debugging.
   void print();
 
 private:
+  void parseGreeting(uint8_t *buffer, size_t length);
+  void parseHandshake(uint8_t *buffer, int length);
   void sendGreeting();
   void sendHandshake();
 

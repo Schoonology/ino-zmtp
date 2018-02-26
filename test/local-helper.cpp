@@ -80,9 +80,12 @@ bool runRouterTest(const char *endpoint) {
   //
   // Connect to peer's ROUTER at the specified address
   //
-  zsock_t *dealer = zsock_new_dealer(endpoint);
+  zsock_t *dealer = zsock_new(ZMQ_DEALER);
   assert(dealer);
   SocketGuard _(dealer);
+
+  zsock_set_identity(dealer, "Helper");
+  assert(zsock_connect(dealer, "%s", endpoint) == 0);
 
   //
   // Send a request

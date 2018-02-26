@@ -38,6 +38,15 @@ ZMTPFrame::~ZMTPFrame() {
   }
 }
 
+// Return the flags associated with this frame, e.g. ZMTP_FRAME_MORE.
+zmtp_frame_flags_t ZMTPFrame::flags() {
+  if (this->buffer) {
+    return (zmtp_frame_flags_t)this->buffer[0];
+  } else {
+    return ZMTP_FRAME_NONE;
+  }
+}
+
 // Return the size, in bytes, of the frame.
 size_t ZMTPFrame::size() {
   if (this->buffer) {

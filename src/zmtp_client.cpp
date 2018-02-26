@@ -1,100 +1,9 @@
 #include "zmtp_client.h"
 #include "util.h"
 
-zmtp_client_state_t parseGreeting(zmtp_client_state_t oldState, uint8_t *buffer,
-                                  size_t length) {
-  assert(buffer);
-
-  zmtp_client_state_t newState = oldState;
-
-  if (newState == SIG_WAIT) {
-    Serial.printf("buffer: %x, length: %d\n", buffer, length);
-
-    if (length < 10 || buffer[0] != 0xFF || buffer[9] != 0x7F) {
-      return _ERROR;
-    }
-
-    newState = SIG_ACK;
-    buffer += 10;
-    length -= 10;
-  }
-
-  if (length == 0) {
-    return newState;
-  }
-
-  if (newState == SIG_ACK) {
-    Serial.printf("buffer: %x, length: %d\n", buffer, length);
-
-    if (length < 2 || buffer[0] != 0x03 || buffer[1] != 0x00) {
-      return _ERROR;
-    }
-
-    newState = VER_ACK;
-    buffer += 2;
-    length -= 2;
-  }
-
-  if (length == 0) {
-    return newState;
-  }
-
-  if (newState == VER_ACK) {
-    Serial.printf("buffer: %x, length: %d\n", buffer, length);
-
-    if (length < 52 || memcmp(buffer, "NULL", 4)) {
-      return _ERROR;
-    }
-
-    newState = GRT_ACK;
-  }
-
-  return newState;
-}
-
-zmtp_client_state_t parseHandshake(uint8_t *buffer, int length) {
-  assert(buffer);
-
-  if (length <= 2 || buffer[0] != 0x04) {
-    return _ERROR;
-  }
-
-  uint8_t command_size = buffer[1];
-
-  if (command_size > length || command_size < 6) {
-    return _ERROR;
-  }
-
-  if (buffer[2] != 0x05 || memcmp(buffer + 3, "READY", 5)) {
-    return _ERROR;
-  }
-
-  int offset = 8;
-  while (offset < length) {
-    uint8_t keySize = buffer[offset];
-    char key[keySize];
-    memcpy(key, buffer + offset + 1, keySize);
-
-    offset = offset + keySize + 1;
-
-    // TODO(schoon) - Handle value sizes (sets and gets) over 256.
-    uint8_t valueSize = buffer[offset + 3];
-    char value[valueSize];
-    memcpy(value, buffer + offset + 4, valueSize);
-
-    offset = offset + valueSize + 4;
-
-    if (memcmp(key, "Identity", keySize) == 0) {
-      this->setIdentity(value, valueSize);
-    }
-  }
-
-  return READY;
-}
-
 ZMTPClient::ZMTPClient(zmtp_client_type_t type, uint8_t *addr, uint16_t port) {
   this->frameBuffer = new uint8_t[256];
-  this->identity = new ZMTPFrame(NULL, 0, ZMTP_FRAME_NONE);
+  this->identity = new ZMTPFrame(NULL, 0, ZMTP_FRAME_MORE);
   this->peerAddress = IPAddress(addr);
   this->peerPort = port;
   this->state = CONNECTING;
@@ -104,7 +13,7 @@ ZMTPClient::ZMTPClient(zmtp_client_type_t type, uint8_t *addr, uint16_t port) {
 ZMTPClient::ZMTPClient(zmtp_client_type_t type, TCPClient client) {
   this->client = client;
   this->frameBuffer = new uint8_t[256];
-  this->identity = new ZMTPFrame(NULL, 0, ZMTP_FRAME_NONE);
+  this->identity = new ZMTPFrame(NULL, 0, ZMTP_FRAME_MORE);
   this->state = INIT;
   this->type = type;
 }
@@ -114,7 +23,7 @@ ZMTPClient::~ZMTPClient() {
   delete this->identity;
 }
 
-const ZMTPFrame *ZMTPClient::getIdentity() { return this->identity; }
+ZMTPFrame *ZMTPClient::getIdentity() { return this->identity; }
 
 void ZMTPClient::setIdentity(uint8_t *data, size_t size) {
   assert(data);
@@ -122,7 +31,7 @@ void ZMTPClient::setIdentity(uint8_t *data, size_t size) {
 
   delete this->identity;
 
-  this->identity = new ZMTPFrame(data, size, ZMTP_FRAME_NONE);
+  this->identity = new ZMTPFrame(data, size, ZMTP_FRAME_MORE);
 }
 
 void ZMTPClient::update() {
@@ -155,7 +64,7 @@ void ZMTPClient::update() {
     case SIG_ACK:
     case VER_ACK:
     case GRT_ACK:
-      this->state = parseGreeting(this->state, this->frameBuffer, bytes_read);
+      this->parseGreeting(this->frameBuffer, bytes_read);
 
       this->print();
 
@@ -166,7 +75,7 @@ void ZMTPClient::update() {
       break;
 
     case READY_WAIT:
-      this->state = parseHandshake(this->frameBuffer, bytes_read);
+      this->parseHandshake(this->frameBuffer, bytes_read);
       if (this->state == READY) {
         Serial.println("Received ZMTP handshake.");
       }
@@ -199,6 +108,16 @@ bool ZMTPClient::send(ZMTPFrame *frame) {
   this->client.flush();
 }
 
+ZMTPFrame *ZMTPClient::peek() {
+  this->update();
+
+  if (this->state != READY || !this->receivedFrames.size()) {
+    return NULL;
+  }
+
+  return this->receivedFrames.first();
+}
+
 ZMTPFrame *ZMTPClient::recv() {
   this->update();
 
@@ -210,6 +129,100 @@ ZMTPFrame *ZMTPClient::recv() {
 }
 
 void ZMTPClient::print() { zmtp_debug_dump(this->state); }
+
+void ZMTPClient::parseGreeting(uint8_t *buffer, size_t length) {
+  assert(buffer);
+
+  if (this->state == SIG_WAIT) {
+    Serial.printf("buffer: %x, length: %d\n", buffer, length);
+
+    if (length < 10 || buffer[0] != 0xFF || buffer[9] != 0x7F) {
+      this->state = _ERROR;
+      return;
+    }
+
+    this->state = SIG_ACK;
+    buffer += 10;
+    length -= 10;
+  }
+
+  if (length == 0) {
+    return;
+  }
+
+  if (this->state == SIG_ACK) {
+    Serial.printf("buffer: %x, length: %d\n", buffer, length);
+
+    if (length < 2 || buffer[0] != 0x03 || buffer[1] != 0x00) {
+      this->state = _ERROR;
+      return;
+    }
+
+    this->state = VER_ACK;
+    buffer += 2;
+    length -= 2;
+  }
+
+  if (length == 0) {
+    return;
+  }
+
+  if (this->state == VER_ACK) {
+    Serial.printf("buffer: %x, length: %d\n", buffer, length);
+
+    if (length < 52 || memcmp(buffer, "NULL", 4)) {
+      this->state = _ERROR;
+      return;
+    }
+
+    this->state = GRT_ACK;
+  }
+}
+
+void ZMTPClient::parseHandshake(uint8_t *buffer, int length) {
+  assert(buffer);
+
+  if (length <= 2 || buffer[0] != 0x04) {
+    this->state = _ERROR;
+    return;
+  }
+
+  uint8_t command_size = buffer[1];
+
+  if (command_size > length || command_size < 6) {
+    this->state = _ERROR;
+    return;
+  }
+
+  if (buffer[2] != 0x05 || memcmp(buffer + 3, "READY", 5)) {
+    this->state = _ERROR;
+    return;
+  }
+
+  int offset = 8;
+  while (offset < length) {
+    uint8_t keySize = buffer[offset];
+    uint8_t key[keySize];
+    memcpy(key, buffer + offset + 1, keySize);
+
+    offset = offset + keySize + 1;
+
+    // TODO(schoon) - Handle value sizes (sets and gets) over 256.
+    uint8_t valueSize = buffer[offset + 3];
+    uint8_t value[valueSize];
+    memcpy(value, buffer + offset + 4, valueSize);
+
+    offset = offset + valueSize + 4;
+
+    // If this is a ROUTER socket, we should read in our peer's Identity.
+    if (this->type == ROUTER && memcmp(key, "Identity", keySize) == 0) {
+      Serial.printf("Identity received(%i): %x", valueSize, value);
+      this->setIdentity(value, valueSize);
+    }
+  }
+
+  this->state = READY;
+}
 
 void ZMTPClient::sendGreeting() {
   Serial.println("Sending greeting...");
