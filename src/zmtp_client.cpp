@@ -216,7 +216,8 @@ void ZMTPClient::parseHandshake(uint8_t *buffer, int length) {
 
     // If this is a ROUTER socket, we should read in our peer's Identity.
     if (this->type == ROUTER && memcmp(key, "Identity", keySize) == 0) {
-      Serial.printf("Identity received(%i): %x", valueSize, value);
+      Serial.printf("Identity received(%i): ", valueSize);
+      zmtp_debug_dump(value, valueSize);
       this->setIdentity(value, valueSize);
     }
   }

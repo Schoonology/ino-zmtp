@@ -34,11 +34,9 @@ public:
   void print();
 
 private:
-  // TODO(schoon) - For server sockets, use a vector of clients.
-  ZMTPClient *client;
-  bool needsIdentityPrelude;
-  bool awaitingIdentityPrelude;
-
+  ZMTPClient *activeOutgoing;
+  ZMTPClient *activeIncoming;
+  Vector<ZMTPClient *> clients;
   TCPServer *server;
 };
 

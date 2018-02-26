@@ -2,9 +2,8 @@
 #include "util.h"
 
 ZMTPRouter::ZMTPRouter(uint16_t port) {
-  this->client = NULL;
-  this->needsIdentityPrelude = true;
-  this->awaitingIdentityPrelude = true;
+  this->activeIncoming = NULL;
+  this->activeOutgoing = NULL;
 
   this->server = new TCPServer(port);
   assert(this->server);
@@ -14,22 +13,21 @@ ZMTPRouter::ZMTPRouter(uint16_t port) {
 }
 
 ZMTPRouter::~ZMTPRouter() {
-  if (this->client) {
-    delete this->client;
+  while (this->clients.size()) {
+    delete this->clients.takeFirst();
   }
 
   delete this->server;
 }
 
 void ZMTPRouter::update() {
-  if (this->client) {
-    this->client->update();
-    return;
+  for (int i = 0; i < this->clients.size(); ++i) {
+    this->clients[i]->update();
   }
 
   TCPClient client = this->server->available();
   if (client.connected()) {
-    this->client = new ZMTPClient(ROUTER, client);
+    this->clients.append(new ZMTPClient(ROUTER, client));
     Serial.println("Client acquired.");
     this->print();
   }
@@ -38,48 +36,69 @@ void ZMTPRouter::update() {
 bool ZMTPRouter::send(ZMTPFrame *frame) {
   this->update();
 
-  if (!this->client) {
-    return false;
+  // As long as we have an active client, send this frame there.
+  if (this->activeOutgoing) {
+    ZMTPClient *client = this->activeOutgoing;
+
+    if (frame->flags() == ZMTP_FRAME_NONE) {
+      Serial.println("- Clearing active outgoing.");
+      this->activeOutgoing = NULL;
+    }
+
+    return client->send(frame);
   }
 
-  if (this->awaitingIdentityPrelude) {
-    // TODO(schoon) - Use this to route to the appropriate client.
-    // TODO(schoon) - Throw an error if the identity frame is missing
-    // the ZMTP_FRAME_MORE flag.
-    this->awaitingIdentityPrelude = false;
-    return true;
+  // If we don't have an active client, then we're between messages. This
+  // should be interpreted as an identity frame.
+  // TODO(schoon) - Throw an error if the identity frame is missing
+  // the ZMTP_FRAME_MORE flag?
+  for (int i = 0; i < this->clients.size(); ++i) {
+    if (this->clients[i]->getIdentity()->compare(frame) == 0) {
+      Serial.println("- New active outgoing.");
+      this->activeOutgoing = this->clients[i];
+      return true;
+    }
   }
 
-  this->awaitingIdentityPrelude = frame->flags() == ZMTP_FRAME_NONE;
-
-  return this->client->send(frame);
+  // No active client and no matching client—bail.
+  return false;
 }
 
 ZMTPFrame *ZMTPRouter::recv() {
   this->update();
 
-  if (!this->client) {
-    return NULL;
+  // As long as we have an active client, receive from that client.
+  if (this->activeIncoming) {
+    ZMTPFrame *frame = this->activeIncoming->recv();
+    if (!frame) {
+      return NULL;
+    }
+
+    if (frame->flags() == ZMTP_FRAME_NONE) {
+      Serial.println("- Clearing active incoming.");
+      this->activeIncoming = NULL;
+    }
+
+    return frame;
   }
 
-  if (!this->client->peek()) {
-    return NULL;
+  // If we don't have an active client, then we're between messages.
+  // We need to scan all attached clients, set the active client, but
+  // return the identity frame instead.
+  for (int i = 0; i < this->clients.size(); ++i) {
+    if (this->clients[i]->peek()) {
+      Serial.println("- New active incoming.");
+      this->activeIncoming = this->clients[i];
+      return this->clients[i]->getIdentity();
+    }
   }
 
-  if (this->needsIdentityPrelude) {
-    this->needsIdentityPrelude = false;
-    return this->client->getIdentity();
-  }
-
-  this->needsIdentityPrelude = this->client->peek()->flags() == ZMTP_FRAME_MORE;
-
-  return this->client->recv();
+  // No active client and no client with pending messages—bail.
+  return NULL;
 }
 
 void ZMTPRouter::print() {
-  if (!this->client) {
-    return;
+  for (int i = 0; i < this->clients.size(); ++i) {
+    this->clients[i]->print();
   }
-
-  this->client->print();
 }

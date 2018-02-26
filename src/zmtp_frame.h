@@ -33,6 +33,9 @@ public:
   // Destroy a frame.
   ~ZMTPFrame();
 
+  // Compares the contents of one frame to another, returning 0 when equal.
+  int compare(ZMTPFrame *other);
+
   // Return the flags associated with this frame, e.g. ZMTP_FRAME_MORE.
   zmtp_frame_flags_t flags();
 

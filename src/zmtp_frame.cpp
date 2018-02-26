@@ -38,6 +38,15 @@ ZMTPFrame::~ZMTPFrame() {
   }
 }
 
+// Compares the contents of one frame to another, returning 0 when equal.
+int ZMTPFrame::compare(ZMTPFrame *other) {
+  if (this->size() != other->size()) {
+    return -1;
+  }
+
+  return memcmp(this->data(), other->data(), this->size());
+}
+
 // Return the flags associated with this frame, e.g. ZMTP_FRAME_MORE.
 zmtp_frame_flags_t ZMTPFrame::flags() {
   if (this->buffer) {

@@ -80,26 +80,45 @@ bool runRouterTest(const char *endpoint) {
   //
   // Connect to peer's ROUTER at the specified address
   //
-  zsock_t *dealer = zsock_new(ZMQ_DEALER);
-  assert(dealer);
-  SocketGuard _(dealer);
+  zsock_t *first = zsock_new(ZMQ_DEALER);
+  assert(first);
+  SocketGuard _1(first);
 
-  zsock_set_identity(dealer, "Helper");
-  assert(zsock_connect(dealer, "%s", endpoint) == 0);
+  zsock_set_identity(first, "Helper");
+  assert(zsock_connect(first, "%s", endpoint) == 0);
 
   //
-  // Send a request
+  // Connect a second socket
+  //
+  zsock_t *second = zsock_new(ZMQ_DEALER);
+  assert(second);
+  SocketGuard _2(second);
+
+  zsock_set_identity(second, "Another");
+  assert(zsock_connect(second, "%s", endpoint) == 0);
+
+  printf("---\n");
+
+  //
+  // Send a pair of requests
   //
   zmsg_t *question = zmsg_new();
   assert(question);
   assert(zmsg_addstr(question, "Answer?") == 0);
-  assert(zmsg_send(&question, dealer) == 0);
+  assert(zmsg_send(&question, first) == 0);
+
+  printf("====\n");
+
+  zmsg_t *ping = zmsg_new();
+  assert(ping);
+  assert(zmsg_addstr(ping, "ping") == 0);
+  assert(zmsg_send(&ping, second) == 0);
 
   //
-  // Get a response
+  // Get a response (first)
   //
-  zmsg_t *answer = zmsg_recv(dealer);
   printf("Client should respond with a single frame: ");
+  zmsg_t *answer = zmsg_recv(first);
   size_t answer_size = zmsg_size(answer);
   if (answer_size != 1) {
     printf("✘ — Invalid number of frames (%lu)\n", answer_size);
@@ -111,6 +130,26 @@ bool runRouterTest(const char *endpoint) {
   char *answer_str = zmsg_popstr(answer);
   if (!streq(answer_str, "42")) {
     printf("✘ — Invalid answer (%s)\n", answer_str);
+    return false;
+  }
+  printf("✔\n");
+
+  //
+  // Get a response (second)
+  //
+  printf("Client should respond with a single frame: ");
+  zmsg_t *pong = zmsg_recv(second);
+  size_t pong_size = zmsg_size(pong);
+  if (pong_size != 1) {
+    printf("✘ — Invalid number of frames (%lu)\n", pong_size);
+    return false;
+  }
+  printf("✔\n");
+
+  printf("Client should respond with a 2-octet answer: ");
+  char *pong_str = zmsg_popstr(pong);
+  if (!streq(pong_str, "pong")) {
+    printf("✘ — Invalid message (%s)\n", pong_str);
     return false;
   }
   printf("✔\n");
