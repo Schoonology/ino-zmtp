@@ -1,5 +1,8 @@
 #include "../src/ZMTP.h"
 
+SerialLogHandler logHandler(LOG_LEVEL_WARN,
+                            {{"app", LOG_LEVEL_ALL}, {"zmtp", LOG_LEVEL_WARN}});
+
 SYSTEM_MODE(MANUAL);
 
 unsigned long TIMEOUT = 30000;
@@ -137,21 +140,16 @@ void runRouterTest() {
   // Send responses
   //
   router.send(firstIdentity);
-
-  ZMTPFrame firstResponse("42", ZMTP_FRAME_NONE);
-  router.send(&firstResponse);
+  router.send(new ZMTPFrame("42"));
 
   router.send(secondIdentity);
-
-  ZMTPFrame secondResponse("pong", ZMTP_FRAME_NONE);
-  router.send(&secondResponse);
+  router.send(new ZMTPFrame("pong"));
 }
 
 void setup() {
   enableWiFi();
 
   uint8_t address[4] = {192, 168, 29, 198};
-  // uint8_t address[4] = {172, 20, 10, 3};
   runDealerTest(address);
   runRouterTest();
 

@@ -97,8 +97,6 @@ bool runRouterTest(const char *endpoint) {
   zsock_set_identity(second, "Another");
   assert(zsock_connect(second, "%s", endpoint) == 0);
 
-  printf("---\n");
-
   //
   // Send a pair of requests
   //
@@ -106,8 +104,6 @@ bool runRouterTest(const char *endpoint) {
   assert(question);
   assert(zmsg_addstr(question, "Answer?") == 0);
   assert(zmsg_send(&question, first) == 0);
-
-  printf("====\n");
 
   zmsg_t *ping = zmsg_new();
   assert(ping);

@@ -9,7 +9,7 @@ ZMTPRouter::ZMTPRouter(uint16_t port) {
   assert(this->server);
 
   this->server->begin();
-  Serial.printf("Listening on port %u...\n", port);
+  ZMTPLog.trace("Listening on port %u...", port);
 }
 
 ZMTPRouter::~ZMTPRouter() {
@@ -28,7 +28,7 @@ void ZMTPRouter::update() {
   TCPClient client = this->server->available();
   if (client.connected()) {
     this->clients.append(new ZMTPClient(ROUTER, client));
-    Serial.println("Client acquired.");
+    ZMTPLog.trace("Client acquired.");
     this->print();
   }
 }
@@ -41,7 +41,6 @@ bool ZMTPRouter::send(ZMTPFrame *frame) {
     ZMTPClient *client = this->activeOutgoing;
 
     if (frame->flags() == ZMTP_FRAME_NONE) {
-      Serial.println("- Clearing active outgoing.");
       this->activeOutgoing = NULL;
     }
 
@@ -54,7 +53,6 @@ bool ZMTPRouter::send(ZMTPFrame *frame) {
   // the ZMTP_FRAME_MORE flag?
   for (int i = 0; i < this->clients.size(); ++i) {
     if (this->clients[i]->getIdentity()->compare(frame) == 0) {
-      Serial.println("- New active outgoing.");
       this->activeOutgoing = this->clients[i];
       return true;
     }
@@ -75,7 +73,6 @@ ZMTPFrame *ZMTPRouter::recv() {
     }
 
     if (frame->flags() == ZMTP_FRAME_NONE) {
-      Serial.println("- Clearing active incoming.");
       this->activeIncoming = NULL;
     }
 
@@ -87,7 +84,6 @@ ZMTPFrame *ZMTPRouter::recv() {
   // return the identity frame instead.
   for (int i = 0; i < this->clients.size(); ++i) {
     if (this->clients[i]->peek()) {
-      Serial.println("- New active incoming.");
       this->activeIncoming = this->clients[i];
       return this->clients[i]->getIdentity();
     }

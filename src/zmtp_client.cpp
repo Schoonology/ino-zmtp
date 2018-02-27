@@ -53,9 +53,9 @@ void ZMTPClient::update() {
 
   while (this->client.available()) {
     int bytes_read = this->client.read(this->frameBuffer, 256);
-    Serial.printf("Bytes read: %d\n", bytes_read);
+    ZMTPLog.trace("Bytes read: %d", bytes_read);
 
-    Serial.print("Bytes: ");
+    ZMTPLog.trace("Bytes: ");
     zmtp_debug_dump(this->frameBuffer, bytes_read);
 
     switch (this->state) {
@@ -69,7 +69,7 @@ void ZMTPClient::update() {
       this->print();
 
       if (this->state == GRT_ACK) {
-        Serial.println("Received ZMTP greeting.");
+        ZMTPLog.trace("Received ZMTP greeting.");
         this->sendHandshake();
       }
       break;
@@ -77,12 +77,12 @@ void ZMTPClient::update() {
     case READY_WAIT:
       this->parseHandshake(this->frameBuffer, bytes_read);
       if (this->state == READY) {
-        Serial.println("Received ZMTP handshake.");
+        ZMTPLog.trace("Received ZMTP handshake.");
       }
       break;
 
     case READY:
-      Serial.println("Message frame.");
+      ZMTPLog.trace("Message frame.");
       this->receivedFrames.append(new ZMTPFrame(this->frameBuffer));
       break;
 
@@ -95,16 +95,16 @@ void ZMTPClient::update() {
 
 bool ZMTPClient::send(ZMTPFrame *frame) {
   assert(frame);
-  Serial.println("Sending: ");
-  frame->print();
   this->update();
 
   if (this->state != READY) {
     return false;
   }
 
+  ZMTPLog.trace("Sending: ");
+  frame->print();
   int written = this->client.write(frame->wireData(), frame->wireSize());
-  Serial.printf("Bytes written: %i\n", written);
+  ZMTPLog.trace("Bytes written: %i", written);
   this->client.flush();
 }
 
@@ -134,7 +134,7 @@ void ZMTPClient::parseGreeting(uint8_t *buffer, size_t length) {
   assert(buffer);
 
   if (this->state == SIG_WAIT) {
-    Serial.printf("buffer: %x, length: %d\n", buffer, length);
+    ZMTPLog.trace("buffer: %x, length: %d", buffer, length);
 
     if (length < 10 || buffer[0] != 0xFF || buffer[9] != 0x7F) {
       this->state = _ERROR;
@@ -151,7 +151,7 @@ void ZMTPClient::parseGreeting(uint8_t *buffer, size_t length) {
   }
 
   if (this->state == SIG_ACK) {
-    Serial.printf("buffer: %x, length: %d\n", buffer, length);
+    ZMTPLog.trace("buffer: %x, length: %d", buffer, length);
 
     if (length < 2 || buffer[0] != 0x03 || buffer[1] != 0x00) {
       this->state = _ERROR;
@@ -168,7 +168,7 @@ void ZMTPClient::parseGreeting(uint8_t *buffer, size_t length) {
   }
 
   if (this->state == VER_ACK) {
-    Serial.printf("buffer: %x, length: %d\n", buffer, length);
+    ZMTPLog.trace("buffer: %x, length: %d", buffer, length);
 
     if (length < 52 || memcmp(buffer, "NULL", 4)) {
       this->state = _ERROR;
@@ -216,7 +216,7 @@ void ZMTPClient::parseHandshake(uint8_t *buffer, int length) {
 
     // If this is a ROUTER socket, we should read in our peer's Identity.
     if (this->type == ROUTER && memcmp(key, "Identity", keySize) == 0) {
-      Serial.printf("Identity received(%i): ", valueSize);
+      ZMTPLog.trace("Identity received(%i): ", valueSize);
       zmtp_debug_dump(value, valueSize);
       this->setIdentity(value, valueSize);
     }
@@ -226,7 +226,7 @@ void ZMTPClient::parseHandshake(uint8_t *buffer, int length) {
 }
 
 void ZMTPClient::sendGreeting() {
-  Serial.println("Sending greeting...");
+  ZMTPLog.trace("Sending greeting...");
 
   uint8_t greeting[64];
   memset(greeting, 0, 64);
@@ -248,14 +248,14 @@ void ZMTPClient::sendGreeting() {
   zmtp_debug_dump(greeting, 64);
 
   int written = this->client.write(greeting, 64);
-  Serial.printf("Bytes written: %i\n", written);
+  ZMTPLog.trace("Bytes written: %i", written);
   this->client.flush();
 
   this->state = SIG_WAIT;
 }
 
 void ZMTPClient::sendHandshake() {
-  Serial.println("Sending handshake...");
+  ZMTPLog.trace("Sending handshake...");
 
   size_t handshake_size = 43 + this->identity->size();
   uint8_t *handshake = new uint8_t[handshake_size];
@@ -287,7 +287,7 @@ void ZMTPClient::sendHandshake() {
   zmtp_debug_dump(handshake, handshake_size);
 
   int written = this->client.write(handshake, handshake_size);
-  Serial.printf("Bytes written: %i\n", written);
+  ZMTPLog.trace("Bytes written: %i", written);
   this->client.flush();
 
   this->state = READY_WAIT;
