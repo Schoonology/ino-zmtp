@@ -4,14 +4,12 @@ This is a basic, _partial_ implementation of [ZMTP][zmtp] for Particle devices. 
 
 Current support:
 
+- All sockets
+  - Sending and receiving messages
 - DEALER sockets
   - Associating a custom identity
-  - Sending messages
-
-Desired support:
-
-- Receiving messages for all socket types
 - ROUTER sockets
+  - Routing using identity frames, when specified
 
 ## Including in your project
 
@@ -30,34 +28,44 @@ the top of your project:
 
 ## Usage
 
-The ZMTP library (and it's bigger sibling, ZeroMQ) are centered around two types: sockets (`zmtp_socket_t`) and frames (`zmtp_frame_t`). To start, create a new socket, providing the type of socket you want to create:
+The ZMTP library (and it's bigger sibling, ZeroMQ) are centered around two types: sockets (`ZMTPSocket`) and frames (`ZMTPFrame`). To start, create a new socket, either of type ZMTPDealer (for a DEALER socket) or of type ZMTPRouter (for a ROUTER socket):
 
 ```
-zmtp_socket_t *socket = zmtp_socket_new (DEALER);
+// ZMTPRouter takes the port to listen on.
+ZMTPSocket *router = new ZMTPRouter(1235);
+
+// ZMTPDealer takes the address and port to connect to.
+ZMTPSocket *dealer = new ZMTPDealer(IPAddress(192, 168, 29, 123), 1234);
 ```
 
 Messages in ZMTP are built of frames: zero or more frames with a "MORE" flag, followed by a _single_ frame without that flag:
 
 ```
-uint8_t first_data[5] = { 'h', 'e', 'l', 'l', 'o' };
-zmtp_frame_t *first_frame = zmtp_frame_new (first_data, 5, ZMTP_FRAME_MORE);
+ZMTPFrame *firstFrame = new ZMTPFrame("Hello", ZMTP_FRAME_MORE);
 
-uint8_t second_data[5] = { 'w', 'o', 'r', 'l', 'd' };
-zmtp_frame_t *second_frame = zmtp_frame_new (second_data, 5, ZMTP_FRAME_MORE);
+ZMTPFrame *secondFrame = new ZMTPFrame("World");
 ```
 
 To send those frames:
 
 ```
-zmtp_socket_send (socket, first_frame);
-zmtp_socket_send (socket, second_frame);
+dealer.send(firstFrame);
+dealer.send(secondFrame);
 ```
 
 Finally, once you're finished with the socket, it should be destroyed:
 
 ```
-zmtp_socket_destroy (&socket);
+delete dealer;
+delete router;
 ```
+
+## Further reading
+
+To get the most out of this library, you should understand how DEALERs and ROUTERs interact, and what they expect. That's best left to the original descriptions and specifications:
+
+- [ZMTP][zmtp]
+- [Dealers & Routers][reqrep]
 
 ## Contributing
 
@@ -65,4 +73,5 @@ Pull requests are welcome and encouraged. Please adhere to the [Contributor Cove
 
 [zmtp]: https://rfc.zeromq.org/spec:37/ZMTP
 [zre]: https://rfc.zeromq.org/spec:36/ZRE/
+[reqrep]: https://rfc.zeromq.org/spec:28/REQREP/
 [covenant]: https://www.contributor-covenant.org/version/1/4/code-of-conduct.html
