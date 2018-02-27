@@ -23,9 +23,17 @@ public:
   // and sent along with the frame.
   ZMTPFrame(const uint8_t *data, uint8_t size, zmtp_frame_flags_t flags);
 
+  // Create a new ZMTP frame with the specified size. If data is provided,
+  // it will be copied into the frame. Flags will be set to ZMTP_FRAME_NONE.
+  ZMTPFrame(const uint8_t *data, uint8_t size);
+
   // Create a new ZMTP frame from the specified, null-terminated string. The
   // provided flags will be set and sent along with the frame.
   ZMTPFrame(const char *str, zmtp_frame_flags_t flags);
+
+  // Create a new ZMTP frame from the specified, null-terminated string.
+  // Flags will be set to ZMTP_FRAME_NONE.
+  ZMTPFrame(const char *str);
 
   // Create a new ZMTP frame from the specified wire data.
   ZMTPFrame(const uint8_t *wireData);
@@ -34,6 +42,7 @@ public:
   ~ZMTPFrame();
 
   // Compares the contents of one frame to another, returning 0 when equal.
+  // NOTE: This does not compare flags.
   int compare(ZMTPFrame *other);
 
   // Return the flags associated with this frame, e.g. ZMTP_FRAME_MORE.

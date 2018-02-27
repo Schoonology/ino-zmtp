@@ -88,8 +88,7 @@ void runRouterTest() {
   }
 
   Serial.printf("Received bytes: %u\n", firstIdentity->size());
-  if (firstIdentity->size() != 6 ||
-      memcmp(firstIdentity->data(), "Helper", firstIdentity->size()) != 0) {
+  if (firstIdentity->compare(new ZMTPFrame("Helper")) != 0) {
     Serial.println("Invalid identity received.");
     end();
   }
@@ -101,8 +100,7 @@ void runRouterTest() {
   }
 
   Serial.printf("Received bytes: %u\n", question->size());
-  if (question->size() != 7 ||
-      memcmp(question->data(), "Answer?", question->size()) != 0) {
+  if (question->compare(new ZMTPFrame("Answer?")) != 0) {
     Serial.println("Invalid bytes received.");
     end();
   }
@@ -118,8 +116,7 @@ void runRouterTest() {
   }
 
   Serial.printf("Received bytes: %u\n", secondIdentity->size());
-  if (secondIdentity->size() != 7 ||
-      memcmp(secondIdentity->data(), "Another", secondIdentity->size()) != 0) {
+  if (secondIdentity->compare(new ZMTPFrame("Another")) != 0) {
     Serial.println("Invalid identity received.");
     end();
   }
@@ -131,7 +128,7 @@ void runRouterTest() {
   }
 
   Serial.printf("Received bytes: %u\n", ping->size());
-  if (ping->size() != 4 || memcmp(ping->data(), "ping", ping->size()) != 0) {
+  if (ping->compare(new ZMTPFrame("ping")) != 0) {
     Serial.println("Invalid bytes received.");
     end();
   }

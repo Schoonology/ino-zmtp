@@ -21,10 +21,19 @@ ZMTPFrame::ZMTPFrame(const uint8_t *data, uint8_t size,
   }
 }
 
+// Create a new ZMTP frame with the specified size. If data is provided,
+// it will be copied into the frame. Flags will be set to ZMTP_FRAME_NONE.
+ZMTPFrame::ZMTPFrame(const uint8_t *data, uint8_t size)
+    : ZMTPFrame(data, size, ZMTP_FRAME_NONE) {}
+
 // Create a new ZMTP frame from the specified, null-terminated string. The
 // provided flags will be set and sent along with the frame.
 ZMTPFrame::ZMTPFrame(const char *str, zmtp_frame_flags_t flags)
     : ZMTPFrame((const uint8_t *)str, strlen(str), flags) {}
+
+// Create a new ZMTP frame from the specified, null-terminated string.
+// Flags will be set to ZMTP_FRAME_NONE.
+ZMTPFrame::ZMTPFrame(const char *str) : ZMTPFrame(str, ZMTP_FRAME_NONE) {}
 
 // Create a new ZMTP frame from the specified, null-terminated string. The
 // provided flags will be set and sent along with the frame.
@@ -39,6 +48,7 @@ ZMTPFrame::~ZMTPFrame() {
 }
 
 // Compares the contents of one frame to another, returning 0 when equal.
+// NOTE: This does not compare flags.
 int ZMTPFrame::compare(ZMTPFrame *other) {
   if (this->size() != other->size()) {
     return -1;
