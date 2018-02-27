@@ -12,7 +12,7 @@ class ZMTPDealer : public ZMTPSocket {
 public:
   // Create a new DEALER socket. This socket will not be able to send
   // or receive frames until it has completely connected.
-  ZMTPDealer(uint8_t *addr, uint16_t port);
+  ZMTPDealer(IPAddress addr, uint16_t port);
 
   // Destroy a socket.
   ~ZMTPDealer();

@@ -1,10 +1,10 @@
 #include "zmtp_client.h"
 #include "util.h"
 
-ZMTPClient::ZMTPClient(zmtp_client_type_t type, uint8_t *addr, uint16_t port) {
+ZMTPClient::ZMTPClient(zmtp_client_type_t type, IPAddress addr, uint16_t port) {
   this->frameBuffer = new uint8_t[256];
   this->identity = new ZMTPFrame(NULL, 0, ZMTP_FRAME_MORE);
-  this->peerAddress = IPAddress(addr);
+  this->peerAddress = addr;
   this->peerPort = port;
   this->state = CONNECTING;
   this->type = type;

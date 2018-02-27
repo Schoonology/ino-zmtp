@@ -41,7 +41,7 @@ void enableWiFi() {
   Serial.println(WiFi.localIP());
 }
 
-void runDealerTest(uint8_t *address) {
+void runDealerTest(IPAddress address) {
   Serial.println("");
   Serial.println("DEALER tests:");
   Serial.println("=============");
@@ -149,8 +149,7 @@ void runRouterTest() {
 void setup() {
   enableWiFi();
 
-  uint8_t address[4] = {192, 168, 29, 198};
-  runDealerTest(address);
+  runDealerTest(IPAddress(192, 168, 29, 198));
   runRouterTest();
 
   end();

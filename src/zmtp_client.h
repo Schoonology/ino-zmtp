@@ -27,7 +27,7 @@ typedef enum {
  */
 class ZMTPClient {
 public:
-  ZMTPClient(zmtp_client_type_t type, uint8_t *addr, uint16_t port);
+  ZMTPClient(zmtp_client_type_t type, IPAddress addr, uint16_t port);
   ZMTPClient(zmtp_client_type_t type, TCPClient client);
 
   ~ZMTPClient();

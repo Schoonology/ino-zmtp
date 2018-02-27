@@ -1,7 +1,7 @@
 #include "zmtp_dealer.h"
 #include "util.h"
 
-ZMTPDealer::ZMTPDealer(uint8_t *addr, uint16_t port) {
+ZMTPDealer::ZMTPDealer(IPAddress addr, uint16_t port) {
   this->client = new ZMTPClient(DEALER, addr, port);
   assert(this->client);
 }
